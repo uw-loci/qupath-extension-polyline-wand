@@ -23,11 +23,12 @@ The toolbar exposes a single **Polyline Wand** tool. Right-click the toolbar but
 
 - **Local region editing.** At mouse-press, only the polyline section within ~3x brush radius of the cursor is editable. The head and tail are spliced back bit-exact at commit, so untouched segments never get re-shaped -- no collateral smoothing or skeletonization round-trip on parts of the line you didn't touch. Bounds work on long polylines too: the engine sees ~50 vertices instead of 10,000. Adjustable via the "Local region multiplier" preference (default 3.0; set to 0 to disable).
 - **Scissors / cut-at-click mode.** Pick **Scissors (cut at click)** from the right-click **Mode** submenu. The toolbar icon swaps from paint-brush to scissors. A click on the selected polyline finds the closest point on it (vertex or interpolated along a segment), splits the polyline into two `PolylineROI` annotations at that point, removes the original, and selects the first half. Both new pieces inherit the original's path class, name, and color.
-- **Zoom-aware brush.** Brush radius is interpreted in **screen pixels**, so the on-screen size stays constant and zoom-out automatically makes the brush cover a larger region of the image.
+- **Zoom-aware brush.** With the default *Radius follows zoom* preference on, brush radius is interpreted in **screen pixels** so the on-screen size stays constant and zoom-out automatically makes the brush cover a larger region of the image (matching QuPath's built-in brush). Turn it off to lock the brush to image pixels instead.
+- **Cursor matches felt effect.** The solid cursor circle is drawn at the radius where the cosine falloff still has significant strength (default 75% of the brush radius); a faint dashed outer ring shows the true maximum reach where the per-vertex weight tapers to zero. Erase-from-end and area-proxy use a hard radius and draw a single solid circle.
 - **Auto endpoint erase.** If the stroke begins near an endpoint of a polyline, the brush switches to erase-from-end mode (the line shortens from that end). Hold Shift to override and edit at an endpoint normally.
 - **LineROI promotion.** Editing a 2-point `LineROI` for the first time densifies it into a `PolylineROI` (default 32 vertices) so the engines have interior vertices to work with.
 - **Throttled commits.** Mid-drag `setROI` calls are throttled to ~30 Hz with `isChanging=true`, so the undo stack stays clean (one entry per stroke).
-- **Mouse-wheel brush size.** While the tool is active, scroll the wheel (no modifier) to adjust brush radius live. Modifier+wheel is left for QuPath's normal zoom.
+- **Alt+wheel brush size.** While the tool is active, hold Alt and scroll the wheel to adjust brush radius live. Plain wheel is left to QuPath for normal pan/zoom.
 
 ## Right-click toolbar menu
 
@@ -47,7 +48,7 @@ The **Engine settings** submenu rebuilds itself based on the active engine and e
 
 All preferences live under the **Polyline Wand** category in QuPath's Preferences pane, with engine-specific entries grouped under nested sub-categories:
 
-- *Polyline Wand* -- engine choice, default mode, brush radius, throttle, endpoint erase, line conversion, end-stroke simplify, cursor color, local region multiplier
+- *Polyline Wand* -- engine choice, default mode, brush radius, radius-follows-zoom toggle, cursor effective scale, throttle, endpoint erase, line conversion, end-stroke simplify, cursor color, local region multiplier
 - *Polyline Wand: Direct vertex push* -- falloff profile, radial bias, densify, max insertions, velocity damping
 - *Polyline Wand: Area proxy* -- buffer width fraction, mask max dim, simplify tolerance, disconnection policy, anchor endpoints, close gaps before thinning, overlay alpha
 - *Polyline Wand: Displacement field* -- kernel type, sigma fraction, displacement strength, velocity damping, densify divisor, Catmull-Rom densify, self-intersection guard

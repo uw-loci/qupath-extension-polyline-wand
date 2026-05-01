@@ -53,11 +53,30 @@ public final class PolylineWandPreferences {
                 .build());
 
         items.add(new PropertyItemBuilder<>(PolylineWandParameters.brushRadiusProperty(), Double.class)
-                .name("Brush radius (screen px)")
+                .name("Brush radius")
                 .category(CATEGORY)
-                .description("Brush radius in on-screen pixels. The brush stays a constant "
-                        + "size on screen and automatically covers a larger region of the image "
-                        + "when zoomed out. Adjustable live with the mouse wheel.")
+                .description("Brush radius. Interpreted as screen pixels when 'Radius follows zoom' "
+                        + "is on (default), or image pixels when off. Adjustable live with Alt+wheel "
+                        + "while the tool is active.")
+                .build());
+
+        items.add(new PropertyItemBuilder<>(PolylineWandParameters.radiusFollowsZoomProperty(), Boolean.class)
+                .name("Radius follows zoom")
+                .category(CATEGORY)
+                .description("When ON (default), brush radius is in screen pixels: zooming out "
+                        + "automatically makes the brush cover a larger region of the image, the way "
+                        + "QuPath's built-in brush does. When OFF, the radius is in image pixels and "
+                        + "the on-screen circle grows as you zoom in.")
+                .build());
+
+        items.add(new PropertyItemBuilder<>(PolylineWandParameters.cursorEffectiveScaleProperty(), Double.class)
+                .name("Cursor effective scale")
+                .category(CATEGORY)
+                .description("How big to draw the SOLID cursor relative to the actual brush radius. "
+                        + "Direct vertex push and displacement field engines use a tapered cosine "
+                        + "falloff, so vertices near the edge of the brush move very little. Default "
+                        + "0.75 makes the visible circle match the felt push area; the dashed outer "
+                        + "ring shows the true maximum reach.")
                 .build());
 
         items.add(new PropertyItemBuilder<>(PolylineWandParameters.commitThrottleMsProperty(), Integer.class)

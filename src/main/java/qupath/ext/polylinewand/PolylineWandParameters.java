@@ -33,10 +33,13 @@ public final class PolylineWandParameters {
                     BrushMode.AUTO, BrushMode.class);
 
     private static final DoubleProperty brushRadius =
-            PathPrefs.createPersistentPreference("polylineWandBrushRadius", 25.0);
+            PathPrefs.createPersistentPreference("polylineWandBrushRadius", 40.0);
 
     private static final BooleanProperty radiusFollowsZoom =
             PathPrefs.createPersistentPreference("polylineWandRadiusFollowsZoom", true);
+
+    private static final DoubleProperty cursorEffectiveScale =
+            PathPrefs.createPersistentPreference("polylineWandCursorEffectiveScale", 0.75);
 
     private static final IntegerProperty commitThrottleMs =
             PathPrefs.createPersistentPreference("polylineWandCommitThrottleMs", 33);
@@ -164,6 +167,7 @@ public final class PolylineWandParameters {
     public static DoubleProperty endStrokeSimplifyToleranceProperty() { return endStrokeSimplifyTolerance; }
     public static ObjectProperty<CursorOutlineColor> cursorOutlineColorProperty() { return cursorOutlineColor; }
     public static DoubleProperty localRegionRadiusMultiplierProperty() { return localRegionRadiusMultiplier; }
+    public static DoubleProperty cursorEffectiveScaleProperty() { return cursorEffectiveScale; }
 
     public static ObjectProperty<FalloffProfile> directFalloffProfileProperty() { return directFalloffProfile; }
     public static DoubleProperty directRadialBiasProperty() { return directRadialBias; }
@@ -206,6 +210,7 @@ public final class PolylineWandParameters {
     public static double getEndStrokeSimplifyTolerance() { return endStrokeSimplifyTolerance.get(); }
     public static CursorOutlineColor getCursorOutlineColor() { return cursorOutlineColor.get(); }
     public static double getLocalRegionRadiusMultiplier() { return localRegionRadiusMultiplier.get(); }
+    public static double getCursorEffectiveScale() { return cursorEffectiveScale.get(); }
 
     public static FalloffProfile getDirectFalloffProfile() { return directFalloffProfile.get(); }
     public static double getDirectRadialBias() { return directRadialBias.get(); }
@@ -240,8 +245,9 @@ public final class PolylineWandParameters {
     public static void resetDefaults() {
         engineKind.set(EngineKind.DIRECT_VERTEX);
         brushMode.set(BrushMode.AUTO);
-        brushRadius.set(25.0);
+        brushRadius.set(40.0);
         radiusFollowsZoom.set(true);
+        cursorEffectiveScale.set(0.75);
         commitThrottleMs.set(33);
         eraseAtEndpoints.set(true);
         endpointEraseProximity.set(1.0);

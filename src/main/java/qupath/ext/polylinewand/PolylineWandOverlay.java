@@ -56,9 +56,19 @@ public final class PolylineWandOverlay extends AbstractOverlay implements PathOv
         if (!visible.get() || Double.isNaN(cursorImageX) || cursorImageRadius <= 0.0) {
             return;
         }
-        double r = cursorImageRadius;
-        Ellipse2D.Double ellipse = new Ellipse2D.Double(
-                cursorImageX - r, cursorImageY - r, r * 2.0, r * 2.0);
+        // The brush physically reaches to cursorImageRadius, but for engines using
+        // a tapered falloff (cosine / gaussian) the effect is small near the edge.
+        // Draw the SOLID cursor at the effective-scale radius so it visually matches
+        // the felt push area; draw a faint dashed outer at the true maximum reach.
+        double rOuter = cursorImageRadius;
+        double scale = clamp(PolylineWandParameters.getCursorEffectiveScale(), 0.25, 1.0);
+        double rInner = rOuter * scale;
+        // Erase mode + scissors / area-proxy use a hard radius -- no taper, so skip
+        // the inner-vs-outer split for those modes (the full circle IS the effect).
+        boolean hardEdge = currentMode == BrushMode.ERASE_FROM_END
+                || currentMode == BrushMode.CUT_AT_POINT
+                || PolylineWandParameters.getEngineKind() == EngineKind.AREA_PROXY;
+
         Color outlineColor = resolveOutlineColor(currentMode);
         Object oldAa = g2d.getRenderingHint(RenderingHints.KEY_ANTIALIASING);
         Stroke oldStroke = g2d.getStroke();
@@ -66,9 +76,22 @@ public final class PolylineWandOverlay extends AbstractOverlay implements PathOv
         try {
             g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
             float strokeWidth = (float) Math.max(1.0, downsampleFactor);
-            g2d.setStroke(new BasicStroke(strokeWidth));
             g2d.setColor(outlineColor);
-            g2d.draw(ellipse);
+            if (hardEdge) {
+                g2d.setStroke(new BasicStroke(strokeWidth));
+                g2d.draw(ellipseAt(cursorImageX, cursorImageY, rOuter));
+            } else {
+                // Solid inner: where the brush has significant strength.
+                g2d.setStroke(new BasicStroke(strokeWidth));
+                g2d.draw(ellipseAt(cursorImageX, cursorImageY, rInner));
+                // Dashed outer: maximum reach (effect tapers to ~0 here).
+                float dash = (float) Math.max(2.0, downsampleFactor * 4.0);
+                g2d.setStroke(new BasicStroke(strokeWidth * 0.75f, BasicStroke.CAP_BUTT,
+                        BasicStroke.JOIN_MITER, 10f, new float[]{dash, dash}, 0f));
+                g2d.setColor(new Color(outlineColor.getRed(), outlineColor.getGreen(),
+                        outlineColor.getBlue(), 140));
+                g2d.draw(ellipseAt(cursorImageX, cursorImageY, rOuter));
+            }
         } finally {
             g2d.setColor(oldColor);
             g2d.setStroke(oldStroke);
@@ -76,6 +99,16 @@ public final class PolylineWandOverlay extends AbstractOverlay implements PathOv
                 g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, oldAa);
             }
         }
+    }
+
+    private static Ellipse2D.Double ellipseAt(double cx, double cy, double r) {
+        return new Ellipse2D.Double(cx - r, cy - r, r * 2.0, r * 2.0);
+    }
+
+    private static double clamp(double v, double lo, double hi) {
+        if (v < lo) return lo;
+        if (v > hi) return hi;
+        return v;
     }
 
     private static Color resolveOutlineColor(BrushMode mode) {

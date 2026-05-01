@@ -110,8 +110,9 @@ public final class PolylineWandEventHandler implements EventHandler<MouseEvent> 
         if (viewer == null) {
             return;
         }
-        // Mouse-wheel adjusts brush radius; modifier keys leave wheel for zoom.
-        if (e.isControlDown() || e.isShiftDown() || e.isAltDown()) {
+        // Alt+wheel adjusts brush radius. Plain wheel (and other modifiers) is left
+        // alone so QuPath's normal pan/zoom continues to work as expected.
+        if (!e.isAltDown() || e.isControlDown() || e.isShiftDown()) {
             return;
         }
         double current = PolylineWandParameters.getBrushRadius();
@@ -426,9 +427,16 @@ public final class PolylineWandEventHandler implements EventHandler<MouseEvent> 
     }
 
     private double effectiveImageRadius(double prefRadius) {
-        // Brush radius is interpreted as SCREEN pixels. Image-space radius scales
-        // with the current downsample so zoom-out automatically makes the brush
-        // affect a larger region of the image. On-screen size stays constant.
+        // Brush radius interpretation depends on radiusFollowsZoom:
+        //   true  -> screen pixels: image-space radius = prefRadius * downsample,
+        //            so the on-screen size stays constant and zoom-out covers a
+        //            larger region of the image (matches QuPath's built-in brush
+        //            with brushScaleByMag = true).
+        //   false -> image pixels: image-space radius = prefRadius regardless of
+        //            zoom (the on-screen circle grows when you zoom in).
+        if (!PolylineWandParameters.getRadiusFollowsZoom()) {
+            return Math.max(1.0, prefRadius);
+        }
         double ds = viewer == null ? 1.0 : viewer.getDownsampleFactor();
         return Math.max(1.0, prefRadius * ds);
     }

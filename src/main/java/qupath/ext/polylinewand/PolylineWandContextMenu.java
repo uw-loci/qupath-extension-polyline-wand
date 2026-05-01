@@ -44,8 +44,9 @@ public final class PolylineWandContextMenu {
         menu.getItems().add(new SeparatorMenuItem());
 
         MenuItem brushRadiusItem = new MenuItem("Set brush radius...");
-        brushRadiusItem.setOnAction(e -> promptDouble("Brush radius (px)",
-                "Brush radius in image pixels:",
+        brushRadiusItem.setOnAction(e -> promptDouble("Brush radius",
+                "Brush radius (screen pixels by default; image pixels if "
+                        + "'Radius follows zoom' is off):",
                 PolylineWandParameters.getBrushRadius(),
                 PolylineWandParameters.brushRadiusProperty()::set));
         menu.getItems().add(brushRadiusItem);
