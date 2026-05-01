@@ -20,6 +20,11 @@ import qupath.lib.roi.interfaces.ROI;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
@@ -29,8 +34,20 @@ import java.util.concurrent.atomic.AtomicReference;
  */
 public final class AreaProxyEngine implements BrushEngine {
 
+    /**
+     * Single shared background executor so {@link #beginStroke},
+     * {@link #applyDrag}, and {@link #endStroke} never block the FX thread
+     * with JTS buffer/overlay or Zhang-Suen thinning. One thread total --
+     * tasks queue serially per stroke.
+     */
+    private static final ExecutorService EXECUTOR = Executors.newSingleThreadExecutor(r -> {
+        Thread t = new Thread(r, "polyline-wand-area-proxy");
+        t.setDaemon(true);
+        return t;
+    });
+
     private List<Point2> originalPoints;
-    private Geometry workingArea;
+    private volatile Geometry workingArea;
     private double bufferDistance;
     private List<EndpointAnchor> endpointAnchors;
     private Point2 lastBrushPt;
@@ -39,6 +56,8 @@ public final class AreaProxyEngine implements BrushEngine {
     private int stampsSinceCleanup = 0;
     private EndpointSide eraseEnd = EndpointSide.NONE;
     private double brushRadius;
+    private Future<?> pendingTask;
+    private volatile boolean cancelled = false;
 
     @Override
     public void beginStroke(StrokeContext ctx, Point2 imgPt) {
@@ -55,18 +74,7 @@ public final class AreaProxyEngine implements BrushEngine {
                 PolylineWandParameters.getProxyBufferMinPx(),
                 PolylineWandParameters.getProxyBufferWidthFraction() * brushRadius);
 
-        Geometry lineGeom = polylineToJts(originalPoints);
-        try {
-            workingArea = lineGeom.buffer(
-                    bufferDistance,
-                    BufferParameters.DEFAULT_QUADRANT_SEGMENTS,
-                    BufferParameters.CAP_ROUND);
-        } catch (RuntimeException ex) {
-            PolylineWandLogging.LOG.warn("AreaProxyEngine: buffer failed: {}", ex.getMessage(), ex);
-            workingArea = lineGeom.buffer(bufferDistance);
-        }
-
-        // Capture endpoint anchors for later splice.
+        // Capture endpoint anchors immediately so applyDrag has them on first stamp.
         endpointAnchors = new ArrayList<>();
         if (PolylineWandParameters.getProxyAnchorEndpoints() && originalPoints.size() >= 2) {
             Point2 first = originalPoints.get(0);
@@ -78,6 +86,28 @@ public final class AreaProxyEngine implements BrushEngine {
         eraseEnd = decideEraseEnd(ctx, imgPt);
         lastBrushPt = imgPt;
         dirty = false;
+        cancelled = false;
+        workingArea = null;
+
+        // Buffer the polyline off the FX thread. applyDrag will queue stamps
+        // behind this task on the same single-thread executor.
+        final List<Point2> ptsCopy = new ArrayList<>(originalPoints);
+        final double bufDist = bufferDistance;
+        pendingTask = EXECUTOR.submit(() -> {
+            if (cancelled) return;
+            Geometry lineGeom = polylineToJts(ptsCopy);
+            Geometry buffered;
+            try {
+                buffered = lineGeom.buffer(bufDist,
+                        BufferParameters.DEFAULT_QUADRANT_SEGMENTS, BufferParameters.CAP_ROUND);
+            } catch (RuntimeException ex) {
+                PolylineWandLogging.LOG.warn("AreaProxyEngine: buffer failed: {}", ex.getMessage(), ex);
+                buffered = lineGeom.buffer(bufDist);
+            }
+            if (!cancelled) {
+                workingArea = buffered;
+            }
+        });
     }
 
     private EndpointSide decideEraseEnd(StrokeContext ctx, Point2 imgPt) {
@@ -91,44 +121,49 @@ public final class AreaProxyEngine implements BrushEngine {
 
     @Override
     public void applyDrag(StrokeContext ctx, Point2 imgPt, long nowNs) {
-        if (workingArea == null) {
-            return;
-        }
         boolean subtract = ctx.getMode() == BrushMode.ERASE_FROM_END;
         double diameter = brushRadius * 2.0;
-        Geometry stamp;
+        // Build the stamp on the FX thread (cheap: a small ellipse / capsule).
+        final Geometry stamp;
         if (lastBrushPt == null) {
             stamp = BrushStamper.stampForFirstPoint(imgPt.getX(), imgPt.getY(), diameter);
         } else {
             stamp = BrushStamper.stampForSegment(lastBrushPt.getX(), lastBrushPt.getY(),
                     imgPt.getX(), imgPt.getY(), diameter);
         }
-        try {
-            workingArea = subtract
-                    ? OverlayNGRobust.overlay(workingArea, stamp, OverlayNG.DIFFERENCE)
-                    : OverlayNGRobust.overlay(workingArea, stamp, OverlayNG.UNION);
-        } catch (RuntimeException ex) {
-            PolylineWandLogging.LOG.debug("AreaProxyEngine: stamp overlay failed: {}", ex.getMessage());
-            // Best-effort fallback
-            try {
-                workingArea = subtract ? workingArea.difference(stamp) : workingArea.union(stamp);
-            } catch (RuntimeException ex2) {
-                PolylineWandLogging.LOG.warn("AreaProxyEngine: fallback overlay also failed: {}", ex2.getMessage());
+        lastBrushPt = imgPt;
+        // Defer the (potentially expensive) overlay to the background thread.
+        final boolean doSubtract = subtract;
+        pendingTask = EXECUTOR.submit(() -> {
+            if (cancelled || workingArea == null) {
                 return;
             }
-        }
-        lastBrushPt = imgPt;
-        stampsSinceCleanup++;
-        if (stampsSinceCleanup >= 10) {
-            // Periodic cleanup: tiny simplify keeps boundary vertex count from blowing up.
+            Geometry next;
             try {
-                workingArea = org.locationtech.jts.simplify.VWSimplifier.simplify(
-                        workingArea, 0.25 * bufferDistance);
+                next = doSubtract
+                        ? OverlayNGRobust.overlay(workingArea, stamp, OverlayNG.DIFFERENCE)
+                        : OverlayNGRobust.overlay(workingArea, stamp, OverlayNG.UNION);
             } catch (RuntimeException ex) {
-                // ignore
+                PolylineWandLogging.LOG.debug("AreaProxyEngine: stamp overlay failed: {}", ex.getMessage());
+                try {
+                    next = doSubtract ? workingArea.difference(stamp) : workingArea.union(stamp);
+                } catch (RuntimeException ex2) {
+                    PolylineWandLogging.LOG.warn("AreaProxyEngine: fallback overlay also failed: {}", ex2.getMessage());
+                    return;
+                }
             }
-            stampsSinceCleanup = 0;
-        }
+            workingArea = next;
+            stampsSinceCleanup++;
+            if (stampsSinceCleanup >= 10) {
+                try {
+                    workingArea = org.locationtech.jts.simplify.VWSimplifier.simplify(
+                            workingArea, 0.25 * bufferDistance);
+                } catch (RuntimeException ex) {
+                    // ignore
+                }
+                stampsSinceCleanup = 0;
+            }
+        });
         dirty = true;
         // Mid-stroke preview = original points until end-of-stroke. Cheap and avoids
         // skeletonizing per-frame.
@@ -136,6 +171,21 @@ public final class AreaProxyEngine implements BrushEngine {
 
     @Override
     public List<Point2> endStroke(StrokeContext ctx) {
+        // Drain any in-flight overlay tasks before reading workingArea.
+        // Cap the wait so a pathological JTS hang cannot freeze the UI forever;
+        // if we time out we fall back to the original polyline.
+        if (pendingTask != null) {
+            try {
+                pendingTask.get(5, TimeUnit.SECONDS);
+            } catch (TimeoutException te) {
+                PolylineWandLogging.LOG.warn("AreaProxyEngine: stamp pipeline did not drain in time; reverting");
+                cancelled = true;
+                pendingTask.cancel(true);
+                return new ArrayList<>(originalPoints);
+            } catch (Exception ex) {
+                PolylineWandLogging.LOG.warn("AreaProxyEngine: stamp pipeline failed: {}", ex.getMessage());
+            }
+        }
         if (workingArea == null || workingArea.isEmpty()) {
             return new ArrayList<>(originalPoints);
         }
@@ -146,10 +196,18 @@ public final class AreaProxyEngine implements BrushEngine {
                 PolylineWandParameters.getProxySimplifyTolerance(),
                 PolylineWandParameters.getProxyDisconnectionPolicy(),
                 PolylineWandParameters.getProxyAnchorEndpoints());
+        // Skeletonize off the FX thread with a 5s cap so a runaway thinning
+        // pass cannot lock the UI.
         Geometry skeleton;
         try {
-            skeleton = RasterSkeletonizer.skeletonize(workingArea, endpointAnchors, params);
-        } catch (RuntimeException ex) {
+            final Geometry snapshot = workingArea;
+            Future<Geometry> f = EXECUTOR.submit(() -> RasterSkeletonizer.skeletonize(
+                    snapshot, endpointAnchors, params));
+            skeleton = f.get(5, TimeUnit.SECONDS);
+        } catch (TimeoutException te) {
+            PolylineWandLogging.LOG.warn("AreaProxyEngine: skeletonization timed out; reverting");
+            return new ArrayList<>(originalPoints);
+        } catch (Exception ex) {
             PolylineWandLogging.LOG.warn("AreaProxyEngine: skeletonization failed: {}", ex.getMessage(), ex);
             return new ArrayList<>(originalPoints);
         }
@@ -197,6 +255,10 @@ public final class AreaProxyEngine implements BrushEngine {
 
     @Override
     public void cancel(StrokeContext ctx) {
+        cancelled = true;
+        if (pendingTask != null) {
+            pendingTask.cancel(true);
+        }
         workingArea = null;
         endpointAnchors = null;
         originalPoints = null;

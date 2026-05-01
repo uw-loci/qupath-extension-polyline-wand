@@ -53,18 +53,11 @@ public final class PolylineWandPreferences {
                 .build());
 
         items.add(new PropertyItemBuilder<>(PolylineWandParameters.brushRadiusProperty(), Double.class)
-                .name("Brush radius (px)")
+                .name("Brush radius (screen px)")
                 .category(CATEGORY)
-                .description("Brush radius in image pixels at downsample 1.0. Adjustable live with "
-                        + "the mouse wheel while the tool is active.")
-                .build());
-
-        items.add(new PropertyItemBuilder<>(PolylineWandParameters.radiusFollowsZoomProperty(), Boolean.class)
-                .name("Brush size follows zoom")
-                .category(CATEGORY)
-                .description("If checked, the on-screen brush stays a constant size as the user zooms; "
-                        + "if unchecked, the brush is fixed in image-space pixels (smaller on screen "
-                        + "when zoomed out).")
+                .description("Brush radius in on-screen pixels. The brush stays a constant "
+                        + "size on screen and automatically covers a larger region of the image "
+                        + "when zoomed out. Adjustable live with the mouse wheel.")
                 .build());
 
         items.add(new PropertyItemBuilder<>(PolylineWandParameters.commitThrottleMsProperty(), Integer.class)

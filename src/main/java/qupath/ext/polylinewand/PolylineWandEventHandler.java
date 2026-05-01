@@ -256,10 +256,20 @@ public final class PolylineWandEventHandler implements EventHandler<MouseEvent> 
             PolylineWandLogging.LOG.debug("Polyline Wand: engine returned <2 points; skipping final commit");
             return;
         }
-        // End-of-stroke simplification (engine already may have done a local pass).
+        // End-of-stroke cleanup pipeline (shared across all engines):
+        //   1. Compact crowded vertices (vertex pile-up)
+        //   2. Remove self-intersection loops (yarn-ball cleanup)
+        //   3. Visvalingam-Whyatt simplification
+        double minSpacing = Math.max(0.5, brushRadiusForStroke * 0.05);
+        finalPoints = PolylineCompactor.compact(finalPoints, minSpacing);
+        finalPoints = LoopRemover.untangle(finalPoints);
         double tol = PolylineWandParameters.getEndStrokeSimplifyTolerance();
         if (tol > 0.0) {
             finalPoints = StrokeSimplifier.simplifyRange(finalPoints, tol);
+        }
+        if (finalPoints.size() < 2) {
+            PolylineWandLogging.LOG.debug("Polyline Wand: cleanup left <2 points; skipping commit");
+            return;
         }
         ROI finalRoi = ROIs.createPolylineROI(finalPoints, targetPlane);
         if (targetAnnotation instanceof PathROIObject roiObj) {
@@ -301,12 +311,10 @@ public final class PolylineWandEventHandler implements EventHandler<MouseEvent> 
     }
 
     private double effectiveImageRadius(double prefRadius) {
-        if (PolylineWandParameters.getRadiusFollowsZoom()) {
-            // Pref is interpreted as image px at downsample 1.0; on-screen size scales with downsample.
-            // To keep on-screen size constant: image-space radius = prefRadius * downsample.
-            double ds = viewer == null ? 1.0 : viewer.getDownsampleFactor();
-            return Math.max(1.0, prefRadius * ds);
-        }
-        return Math.max(1.0, prefRadius);
+        // Brush radius is interpreted as SCREEN pixels. Image-space radius scales
+        // with the current downsample so zoom-out automatically makes the brush
+        // affect a larger region of the image. On-screen size stays constant.
+        double ds = viewer == null ? 1.0 : viewer.getDownsampleFactor();
+        return Math.max(1.0, prefRadius * ds);
     }
 }

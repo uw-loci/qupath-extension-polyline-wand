@@ -2,6 +2,7 @@ package qupath.ext.polylinewand.engine.direct;
 
 import qupath.ext.polylinewand.BrushMode;
 import qupath.ext.polylinewand.EndpointSide;
+import qupath.ext.polylinewand.PolylineCompactor;
 import qupath.ext.polylinewand.PolylineWandParameters;
 import qupath.ext.polylinewand.StrokeContext;
 import qupath.ext.polylinewand.WorkingPolyline;
@@ -126,6 +127,20 @@ public final class DirectVertexEngine implements BrushEngine {
             working.setPoint(idx, new Point2(v.getX() + moveX * scale, v.getY() + moveY * scale));
             firstTouched = Math.min(firstTouched, idx);
             lastTouched = Math.max(lastTouched, idx);
+        }
+        // Per-frame compactor pass: drop vertices that pile up within the brush
+        // footprint as a result of pushing one part of the line toward another.
+        // Limited to the touched range so untouched regions of long polylines
+        // pay no cost.
+        if (firstTouched <= lastTouched) {
+            double minSpacing = Math.max(0.5, radius * 0.05);
+            int from = Math.max(0, firstTouched - 1);
+            int to = Math.min(working.size() - 1, lastTouched + 1);
+            int dropped = PolylineCompactor.compactRangeInPlace(working, from, to, minSpacing);
+            if (dropped > 0) {
+                indexedTopologyVersion = -1;
+                lastTouched -= dropped;
+            }
         }
         dirty = true;
     }
