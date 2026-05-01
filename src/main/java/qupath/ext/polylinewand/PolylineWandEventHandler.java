@@ -45,6 +45,7 @@ public final class PolylineWandEventHandler implements EventHandler<MouseEvent> 
     private PathObject targetAnnotation;
     private ImagePlane targetPlane;
     private double brushRadiusForStroke;
+    private LocalRegion targetRegion;
 
     public boolean isStrokeActive() {
         return engine != null;
@@ -167,10 +168,22 @@ public final class PolylineWandEventHandler implements EventHandler<MouseEvent> 
         StrokeVelocityTracker velocity = new StrokeVelocityTracker();
         velocity.reset(imgPt, System.nanoTime());
 
+        // Extract the locked editable body. The head and tail are spliced
+        // back at commit so unmodified segments stay bit-exact.
+        List<Point2> allPoints = ((PolylineROI) roi).getAllPoints();
+        double regionMult = PolylineWandParameters.getLocalRegionRadiusMultiplier();
+        if (regionMult <= 0.0) {
+            // Disabled -> body = entire polyline.
+            targetRegion = LocalRegion.extract(allPoints, imgPt, Double.POSITIVE_INFINITY);
+        } else {
+            double regionDist = Math.max(brushRadiusForStroke, brushRadiusForStroke * regionMult);
+            targetRegion = LocalRegion.extract(allPoints, imgPt, regionDist);
+        }
+
         targetAnnotation = selected;
         targetPlane = roi.getImagePlane();
         ctx = new StrokeContext(viewer, targetAnnotation, targetPlane, mode,
-                brushRadiusForStroke, velocity);
+                brushRadiusForStroke, velocity, targetRegion);
         engine = EngineFactory.create(PolylineWandParameters.getEngineKind());
 
         try {
@@ -185,7 +198,7 @@ public final class PolylineWandEventHandler implements EventHandler<MouseEvent> 
         }
 
         throttler = new CommitThrottler(viewer, targetAnnotation, targetPlane, engine,
-                PolylineWandParameters.getCommitThrottleMs());
+                targetRegion, PolylineWandParameters.getCommitThrottleMs());
         throttler.start();
 
         if (overlay != null) {
@@ -239,34 +252,39 @@ public final class PolylineWandEventHandler implements EventHandler<MouseEvent> 
         ctx = null;
         targetAnnotation = null;
         targetPlane = null;
+        targetRegion = null;
         if (overlay != null) {
             overlay.hideCursor();
         }
     }
 
     private void commitFinal() {
-        List<Point2> finalPoints;
+        List<Point2> editedBody;
         try {
-            finalPoints = engine.endStroke(ctx);
+            editedBody = engine.endStroke(ctx);
         } catch (RuntimeException ex) {
             PolylineWandLogging.LOG.warn("Polyline Wand engine endStroke failed: {}", ex.getMessage(), ex);
             return;
         }
-        if (finalPoints == null || finalPoints.size() < 2) {
-            PolylineWandLogging.LOG.debug("Polyline Wand: engine returned <2 points; skipping final commit");
+        if (editedBody == null) {
+            PolylineWandLogging.LOG.debug("Polyline Wand: engine returned null body; skipping final commit");
             return;
         }
-        // End-of-stroke cleanup pipeline (shared across all engines):
-        //   1. Compact crowded vertices (vertex pile-up)
-        //   2. Remove self-intersection loops (yarn-ball cleanup)
-        //   3. Visvalingam-Whyatt simplification
+        // End-of-stroke cleanup pipeline:
+        //   1. Compact body (drop crowded vertices) -- bounded to body only
+        //   2. Splice head + body + tail
+        //   3. LoopRemover -- runs on full polyline so cross-region loops still
+        //      get cleaned (e.g., body bulged into the tail region)
+        //   4. Simplify body indices only -- DO NOT simplify across the splice
+        //      seam, so head and tail remain bit-exact
         double minSpacing = Math.max(0.5, brushRadiusForStroke * 0.05);
-        finalPoints = PolylineCompactor.compact(finalPoints, minSpacing);
-        finalPoints = LoopRemover.untangle(finalPoints);
+        editedBody = PolylineCompactor.compact(editedBody, minSpacing);
         double tol = PolylineWandParameters.getEndStrokeSimplifyTolerance();
         if (tol > 0.0) {
-            finalPoints = StrokeSimplifier.simplifyRange(finalPoints, tol);
+            editedBody = StrokeSimplifier.simplifyRange(editedBody, tol);
         }
+        List<Point2> finalPoints = targetRegion.splice(editedBody);
+        finalPoints = LoopRemover.untangle(finalPoints);
         if (finalPoints.size() < 2) {
             PolylineWandLogging.LOG.debug("Polyline Wand: cleanup left <2 points; skipping commit");
             return;

@@ -8,8 +8,6 @@ import qupath.ext.polylinewand.StrokeContext;
 import qupath.ext.polylinewand.WorkingPolyline;
 import qupath.ext.polylinewand.engine.BrushEngine;
 import qupath.lib.geom.Point2;
-import qupath.lib.roi.PolylineROI;
-import qupath.lib.roi.interfaces.ROI;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -37,12 +35,13 @@ public final class DirectVertexEngine implements BrushEngine {
 
     @Override
     public void beginStroke(StrokeContext ctx, Point2 imgPt) {
-        ROI roi = ctx.getAnnotation().getROI();
-        if (!(roi instanceof PolylineROI poly)) {
-            // Defensive -- the event handler should have already promoted LineROI.
+        // Engines work on the locked body of the LocalRegion, not the full polyline.
+        // The event handler splices head + edited body + tail at commit.
+        List<Point2> body = ctx.getRegion().body;
+        if (body.size() < 2) {
             working = new WorkingPolyline(List.of(imgPt, imgPt));
         } else {
-            working = new WorkingPolyline(poly.getAllPoints());
+            working = new WorkingPolyline(body);
         }
         publishPreview();
         rebuildIndex(ctx.getBrushRadius());

@@ -29,17 +29,19 @@ public final class CommitThrottler {
     private final PathObject annotation;
     private final ImagePlane plane;
     private final BrushEngine engine;
+    private final LocalRegion region;
     private final long minIntervalNs;
 
     private long lastCommitNs = 0L;
     private AnimationTimer timer;
 
     public CommitThrottler(QuPathViewer viewer, PathObject annotation, ImagePlane plane,
-                           BrushEngine engine, int minIntervalMs) {
+                           BrushEngine engine, LocalRegion region, int minIntervalMs) {
         this.viewer = viewer;
         this.annotation = annotation;
         this.plane = plane;
         this.engine = engine;
+        this.region = region;
         this.minIntervalNs = Math.max(1L, (long) minIntervalMs) * 1_000_000L;
     }
 
@@ -72,11 +74,17 @@ public final class CommitThrottler {
     }
 
     private void commitMidStroke() {
-        List<Point2> snapshot = engine.previewSnapshot();
-        if (snapshot == null || snapshot.size() < 2) {
+        List<Point2> bodySnapshot = engine.previewSnapshot();
+        if (bodySnapshot == null) {
             return;
         }
-        ROI newRoi = ROIs.createPolylineROI(snapshot, plane);
+        // Splice the engine's current body into the locked head + tail so the
+        // mid-drag setROI shows the complete polyline.
+        List<Point2> spliced = region.splice(bodySnapshot);
+        if (spliced.size() < 2) {
+            return;
+        }
+        ROI newRoi = ROIs.createPolylineROI(spliced, plane);
         if (annotation instanceof PathROIObject roiObj) {
             roiObj.setROI(newRoi);
         }

@@ -57,6 +57,14 @@ public final class PolylineWandParameters {
             PathPrefs.createPersistentPreference("polylineWandCursorOutlineColor",
                     CursorOutlineColor.THEME, CursorOutlineColor.class);
 
+    /**
+     * Multiplier on brush radius used to size the locked editable body of
+     * the LocalRegion at mousePressed. 0 disables localization (whole
+     * polyline is the body, original behavior).
+     */
+    private static final DoubleProperty localRegionRadiusMultiplier =
+            PathPrefs.createPersistentPreference("polylineWandLocalRegionRadiusMultiplier", 3.0);
+
     // ------------------------------------------------------------------
     // Engine A: Direct vertex push
     // ------------------------------------------------------------------
@@ -155,6 +163,7 @@ public final class PolylineWandParameters {
     public static IntegerProperty lineConversionVertexCountProperty() { return lineConversionVertexCount; }
     public static DoubleProperty endStrokeSimplifyToleranceProperty() { return endStrokeSimplifyTolerance; }
     public static ObjectProperty<CursorOutlineColor> cursorOutlineColorProperty() { return cursorOutlineColor; }
+    public static DoubleProperty localRegionRadiusMultiplierProperty() { return localRegionRadiusMultiplier; }
 
     public static ObjectProperty<FalloffProfile> directFalloffProfileProperty() { return directFalloffProfile; }
     public static DoubleProperty directRadialBiasProperty() { return directRadialBias; }
@@ -196,6 +205,7 @@ public final class PolylineWandParameters {
     public static int getLineConversionVertexCount() { return lineConversionVertexCount.get(); }
     public static double getEndStrokeSimplifyTolerance() { return endStrokeSimplifyTolerance.get(); }
     public static CursorOutlineColor getCursorOutlineColor() { return cursorOutlineColor.get(); }
+    public static double getLocalRegionRadiusMultiplier() { return localRegionRadiusMultiplier.get(); }
 
     public static FalloffProfile getDirectFalloffProfile() { return directFalloffProfile.get(); }
     public static double getDirectRadialBias() { return directRadialBias.get(); }
@@ -238,6 +248,7 @@ public final class PolylineWandParameters {
         lineConversionVertexCount.set(32);
         endStrokeSimplifyTolerance.set(0.5);
         cursorOutlineColor.set(CursorOutlineColor.THEME);
+        localRegionRadiusMultiplier.set(3.0);
 
         directFalloffProfile.set(FalloffProfile.COSINE);
         directRadialBias.set(0.25);

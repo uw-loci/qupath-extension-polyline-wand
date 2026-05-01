@@ -6,8 +6,6 @@ import qupath.ext.polylinewand.PolylineWandParameters;
 import qupath.ext.polylinewand.StrokeContext;
 import qupath.ext.polylinewand.engine.BrushEngine;
 import qupath.lib.geom.Point2;
-import qupath.lib.roi.PolylineROI;
-import qupath.lib.roi.interfaces.ROI;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -28,11 +26,11 @@ public final class DisplacementFieldEngine implements BrushEngine {
 
     @Override
     public void beginStroke(StrokeContext ctx, Point2 imgPt) {
-        ROI roi = ctx.getAnnotation().getROI();
-        if (!(roi instanceof PolylineROI poly)) {
+        List<Point2> body = ctx.getRegion().body;
+        if (body.size() < 2) {
             curve = new WorkingCurve(List.of(imgPt, imgPt));
         } else {
-            curve = new WorkingCurve(poly.getAllPoints());
+            curve = new WorkingCurve(body);
         }
         brushRadius = ctx.getBrushRadius();
         range = ActiveRange.compute(curve, imgPt, 2.0 * brushRadius);

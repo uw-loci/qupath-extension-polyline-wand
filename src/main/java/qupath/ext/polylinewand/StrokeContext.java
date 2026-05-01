@@ -17,15 +17,18 @@ public final class StrokeContext {
     private final BrushMode mode;
     private final double brushRadius;
     private final StrokeVelocityTracker velocity;
+    private final LocalRegion region;
 
     public StrokeContext(QuPathViewer viewer, PathObject annotation, ImagePlane plane,
-                         BrushMode mode, double brushRadius, StrokeVelocityTracker velocity) {
+                         BrushMode mode, double brushRadius, StrokeVelocityTracker velocity,
+                         LocalRegion region) {
         this.viewer = viewer;
         this.annotation = annotation;
         this.plane = plane;
         this.mode = mode;
         this.brushRadius = brushRadius;
         this.velocity = velocity;
+        this.region = region;
     }
 
     public QuPathViewer getViewer() { return viewer; }
@@ -34,4 +37,7 @@ public final class StrokeContext {
     public BrushMode getMode() { return mode; }
     public double getBrushRadius() { return brushRadius; }
     public StrokeVelocityTracker getVelocity() { return velocity; }
+
+    /** Locked head/body/tail split for this stroke. Engines edit body only. */
+    public LocalRegion getRegion() { return region; }
 }

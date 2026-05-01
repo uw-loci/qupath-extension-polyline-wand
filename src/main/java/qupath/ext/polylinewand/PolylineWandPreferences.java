@@ -101,6 +101,17 @@ public final class PolylineWandPreferences {
                         + "the QuPath default-objects color preference.")
                 .build());
 
+        items.add(new PropertyItemBuilder<>(PolylineWandParameters.localRegionRadiusMultiplierProperty(), Double.class)
+                .name("Local region multiplier")
+                .category(CATEGORY)
+                .description("How large the locked editable section of the polyline is, "
+                        + "as a multiple of brush radius. At mouse-press, only vertices within "
+                        + "this distance of the cursor are editable; the rest of the polyline is "
+                        + "spliced back unchanged. Bounds work for long polylines and ensures "
+                        + "untouched segments remain bit-exact. Set to 0 to disable (whole "
+                        + "polyline is editable, original behavior).")
+                .build());
+
         // ---- Engine A: Direct vertex push ----
 
         items.add(new PropertyItemBuilder<>(PolylineWandParameters.directFalloffProfileProperty(), FalloffProfile.class)

@@ -15,8 +15,6 @@ import qupath.ext.polylinewand.StrokeContext;
 import qupath.ext.polylinewand.engine.BrushEngine;
 import qupath.lib.geom.Point2;
 import qupath.lib.roi.GeometryTools;
-import qupath.lib.roi.PolylineROI;
-import qupath.lib.roi.interfaces.ROI;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -61,11 +59,15 @@ public final class AreaProxyEngine implements BrushEngine {
 
     @Override
     public void beginStroke(StrokeContext ctx, Point2 imgPt) {
-        ROI roi = ctx.getAnnotation().getROI();
-        if (!(roi instanceof PolylineROI poly)) {
+        // Operate on the LocalRegion's body only -- the head and tail of the
+        // original polyline are spliced back at commit by the event handler.
+        // This prevents the skeletonization round-trip from re-shaping
+        // untouched parts of long polylines.
+        List<Point2> body = ctx.getRegion().body;
+        if (body.size() < 2) {
             originalPoints = List.of(imgPt, imgPt);
         } else {
-            originalPoints = new ArrayList<>(poly.getAllPoints());
+            originalPoints = new ArrayList<>(body);
         }
         previewRef.set(new ArrayList<>(originalPoints));
 
