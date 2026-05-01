@@ -13,7 +13,8 @@ public enum BrushMode {
     AUTO("Auto (push, erase-near-endpoint)"),
     PUSH("Push"),
     SMOOTH("Smooth"),
-    ERASE_FROM_END("Erase from end");
+    ERASE_FROM_END("Erase from end"),
+    CUT_AT_POINT("Scissors (cut at click)");
 
     private final String displayName;
 

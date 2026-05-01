@@ -12,6 +12,7 @@ import qupath.ext.polylinewand.engine.EngineFactory;
 import qupath.lib.geom.Point2;
 import qupath.lib.gui.viewer.QuPathViewer;
 import qupath.lib.objects.PathObject;
+import qupath.lib.objects.PathObjects;
 import qupath.lib.objects.PathROIObject;
 import qupath.lib.objects.hierarchy.PathObjectHierarchy;
 import qupath.lib.regions.ImagePlane;
@@ -20,6 +21,7 @@ import qupath.lib.roi.PolylineROI;
 import qupath.lib.roi.ROIs;
 import qupath.lib.roi.interfaces.ROI;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -164,6 +166,14 @@ public final class PolylineWandEventHandler implements EventHandler<MouseEvent> 
         brushRadiusForStroke = effectiveImageRadius(PolylineWandParameters.getBrushRadius());
 
         BrushMode mode = decideMode(e, roi, imgPt, brushRadiusForStroke);
+
+        // Scissors / cut-at-click is a one-shot: split the polyline and
+        // return without starting a stroke.
+        if (mode == BrushMode.CUT_AT_POINT && roi instanceof PolylineROI poly) {
+            performCut(selected, poly, imgPt);
+            e.consume();
+            return;
+        }
 
         StrokeVelocityTracker velocity = new StrokeVelocityTracker();
         velocity.reset(imgPt, System.nanoTime());
@@ -317,6 +327,93 @@ public final class PolylineWandEventHandler implements EventHandler<MouseEvent> 
             return BrushMode.PUSH;
         }
         return pref;
+    }
+
+    /**
+     * Split the selected polyline into two PolylineROI annotations at the
+     * point on the polyline closest to {@code clickImagePt}. The original
+     * annotation is removed; the two new pieces inherit its path class.
+     */
+    private void performCut(PathObject annotation, PolylineROI poly, Point2 clickImagePt) {
+        List<Point2> pts = poly.getAllPoints();
+        if (pts.size() < 2) {
+            return;
+        }
+        // Find closest segment + closest point on it
+        int bestSeg = -1;
+        double bestDistSq = Double.MAX_VALUE;
+        Point2 bestPt = null;
+        double bestT = 0.0;
+        for (int i = 0; i < pts.size() - 1; i++) {
+            Point2 a = pts.get(i);
+            Point2 b = pts.get(i + 1);
+            double abx = b.getX() - a.getX();
+            double aby = b.getY() - a.getY();
+            double abLen2 = abx * abx + aby * aby;
+            double t = abLen2 < 1e-12 ? 0.0
+                    : ((clickImagePt.getX() - a.getX()) * abx
+                     + (clickImagePt.getY() - a.getY()) * aby) / abLen2;
+            t = Math.max(0.0, Math.min(1.0, t));
+            double px = a.getX() + t * abx;
+            double py = a.getY() + t * aby;
+            double dx = px - clickImagePt.getX();
+            double dy = py - clickImagePt.getY();
+            double d2 = dx * dx + dy * dy;
+            if (d2 < bestDistSq) {
+                bestDistSq = d2;
+                bestPt = new Point2(px, py);
+                bestSeg = i;
+                bestT = t;
+            }
+        }
+        if (bestSeg < 0 || bestPt == null) {
+            return;
+        }
+        // Build the two halves. If t is at an endpoint of the segment, the
+        // existing vertex serves as the split point (avoid duplicate insert).
+        List<Point2> first = new ArrayList<>();
+        for (int i = 0; i <= bestSeg; i++) {
+            first.add(pts.get(i));
+        }
+        if (bestT > 1e-3) {
+            first.add(bestPt);
+        }
+        List<Point2> second = new ArrayList<>();
+        if (bestT < 1.0 - 1e-3) {
+            second.add(bestPt);
+        }
+        for (int i = bestSeg + 1; i < pts.size(); i++) {
+            second.add(pts.get(i));
+        }
+        if (first.size() < 2 || second.size() < 2) {
+            PolylineWandLogging.LOG.debug("Polyline Wand: cut would leave a degenerate piece; skipping");
+            return;
+        }
+        PolylineROI roi1 = qupath.lib.roi.ROIs.createPolylineROI(first, poly.getImagePlane());
+        PolylineROI roi2 = qupath.lib.roi.ROIs.createPolylineROI(second, poly.getImagePlane());
+        PathObject obj1 = PathObjects.createAnnotationObject(roi1, annotation.getPathClass());
+        PathObject obj2 = PathObjects.createAnnotationObject(roi2, annotation.getPathClass());
+        // Preserve color/name where possible
+        if (annotation.getName() != null) {
+            obj1.setName(annotation.getName());
+            obj2.setName(annotation.getName());
+        }
+        if (annotation.getColor() != null) {
+            obj1.setColor(annotation.getColor());
+            obj2.setColor(annotation.getColor());
+        }
+
+        PathObjectHierarchy hierarchy = viewer.getHierarchy();
+        if (hierarchy == null) {
+            return;
+        }
+        hierarchy.removeObject(annotation, false);
+        hierarchy.addObjects(List.of(obj1, obj2));
+        hierarchy.fireHierarchyChangedEvent(this);
+        viewer.setSelectedObject(obj1);
+        viewer.repaintEntireImage();
+        PolylineWandLogging.LOG.info("Polyline Wand: cut polyline into {} + {} vertices",
+                first.size(), second.size());
     }
 
     private void updateCursorOverlay(MouseEvent e) {

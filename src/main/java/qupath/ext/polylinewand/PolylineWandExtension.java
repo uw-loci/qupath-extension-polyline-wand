@@ -14,7 +14,9 @@ import javafx.scene.input.KeyCodeCombination;
 import javafx.scene.input.KeyCombination;
 import javafx.scene.text.TextAlignment;
 import org.controlsfx.glyphfont.FontAwesome;
+import org.controlsfx.glyphfont.Glyph;
 import org.controlsfx.glyphfont.GlyphFontRegistry;
+import org.controlsfx.control.action.Action;
 import qupath.lib.gui.QuPathGUI;
 import qupath.lib.gui.extensions.QuPathExtension;
 import qupath.lib.gui.prefs.PathPrefs;
@@ -58,18 +60,37 @@ public final class PolylineWandExtension implements QuPathExtension {
         // do not stall startup.
         Thread t = new Thread(() -> {
             PolylineWandEventHandler handler = new PolylineWandEventHandler();
-            Node icon = createIcon(QuPathGUI.TOOLBAR_ICON_SIZE);
+            Glyph icon = createModeAwareIcon(QuPathGUI.TOOLBAR_ICON_SIZE);
             PathTool tool = new PolylineWandPathTool(handler, "Polyline Wand", icon);
 
             Platform.runLater(() -> {
                 KeyCodeCombination chord = new KeyCodeCombination(KeyCode.P, KeyCombination.SHIFT_DOWN);
                 qupath.getToolManager().installTool(tool, chord);
-                qupath.getToolManager().getToolAction(tool).setLongText(String.format(
-                        "(%s) Click and drag to edit a selected line or polyline annotation.%n"
-                                + "Hold Shift to override auto erase-at-endpoint.%n"
-                                + "Mouse-wheel adjusts brush radius.%n"
-                                + "Right-click toolbar button for engine choice and options.",
-                        chord.getDisplayText()));
+                Action action = qupath.getToolManager().getToolAction(tool);
+                Runnable updateLongText = () -> {
+                    BrushMode mode = PolylineWandParameters.getBrushMode();
+                    if (mode == BrushMode.CUT_AT_POINT) {
+                        action.setLongText(String.format(
+                                "(%s) Polyline Wand: Scissors mode.%n"
+                                        + "Click on a selected polyline to cut it at the point "
+                                        + "nearest to the click. The polyline is split into two "
+                                        + "annotations.%n"
+                                        + "Right-click toolbar button to switch back to brush mode.",
+                                chord.getDisplayText()));
+                    } else {
+                        action.setLongText(String.format(
+                                "(%s) Polyline Wand: brush mode.%n"
+                                        + "Click and drag to edit a selected line or polyline.%n"
+                                        + "Mouse-wheel adjusts brush radius.%n"
+                                        + "Hold Shift to override auto erase-at-endpoint.%n"
+                                        + "Right-click toolbar button for engine choice, scissors mode, "
+                                        + "and other options.",
+                                chord.getDisplayText()));
+                    }
+                };
+                updateLongText.run();
+                PolylineWandParameters.brushModeProperty().addListener(
+                        (obs, oldMode, newMode) -> Platform.runLater(updateLongText));
                 attachContextMenuToToolbarButton(qupath);
             });
         }, "polyline-wand-init");
@@ -85,9 +106,14 @@ public final class PolylineWandExtension implements QuPathExtension {
         PolylineWandPreferences.installPreferences(qupath);
     }
 
-    private static Node createIcon(int size) {
+    /**
+     * Build a Glyph icon that swaps between PAINT_BRUSH and CUT (scissors)
+     * based on the current {@link BrushMode}. The toolbar listens to icon
+     * changes via {@code iconProperty()} so we just mutate this single Node.
+     */
+    private static Glyph createModeAwareIcon(int size) {
         var fontAwesome = GlyphFontRegistry.font("FontAwesome");
-        var glyph = fontAwesome.create(FontAwesome.Glyph.PAINT_BRUSH).size(size);
+        Glyph glyph = fontAwesome.create(FontAwesome.Glyph.PAINT_BRUSH).size(size);
         glyph.setAlignment(Pos.CENTER);
         glyph.setContentDisplay(ContentDisplay.CENTER);
         glyph.setTextAlignment(TextAlignment.CENTER);
@@ -95,6 +121,15 @@ public final class PolylineWandExtension implements QuPathExtension {
         glyph.textFillProperty().bind(Bindings.createObjectBinding(
                 () -> ColorToolsFX.getCachedColor(PathPrefs.colorDefaultObjectsProperty().get()),
                 PathPrefs.colorDefaultObjectsProperty()));
+        Runnable updateGlyph = () -> {
+            BrushMode mode = PolylineWandParameters.getBrushMode();
+            glyph.setIcon(mode == BrushMode.CUT_AT_POINT
+                    ? FontAwesome.Glyph.CUT
+                    : FontAwesome.Glyph.PAINT_BRUSH);
+        };
+        updateGlyph.run();
+        PolylineWandParameters.brushModeProperty().addListener(
+                (obs, oldMode, newMode) -> Platform.runLater(updateGlyph));
         return glyph;
     }
 
