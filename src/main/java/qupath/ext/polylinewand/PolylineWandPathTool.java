@@ -9,7 +9,6 @@ import javafx.beans.property.StringProperty;
 import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.input.MouseEvent;
-import javafx.scene.input.ScrollEvent;
 import qupath.lib.gui.viewer.QuPathViewer;
 import qupath.lib.gui.viewer.tools.PathTool;
 
@@ -41,7 +40,6 @@ public final class PolylineWandPathTool implements PathTool {
         }
         Parent canvas = viewer.getView();
         canvas.addEventHandler(MouseEvent.ANY, handler);
-        canvas.addEventHandler(ScrollEvent.SCROLL, handler::handleScroll);
         handler.attach(viewer);
     }
 
@@ -52,7 +50,6 @@ public final class PolylineWandPathTool implements PathTool {
         }
         Parent canvas = viewer.getView();
         canvas.removeEventHandler(MouseEvent.ANY, handler);
-        canvas.removeEventHandler(ScrollEvent.SCROLL, handler::handleScroll);
         handler.detach(viewer);
         this.viewer = null;
     }

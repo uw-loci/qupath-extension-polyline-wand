@@ -56,8 +56,8 @@ public final class PolylineWandPreferences {
                 .name("Brush radius")
                 .category(CATEGORY)
                 .description("Brush radius. Interpreted as screen pixels when 'Radius follows zoom' "
-                        + "is on (default), or image pixels when off. Adjustable live with Alt+wheel "
-                        + "while the tool is active.")
+                        + "is on (default), or image pixels when off. Adjust here or via the "
+                        + "right-click toolbar menu.")
                 .build());
 
         items.add(new PropertyItemBuilder<>(PolylineWandParameters.radiusFollowsZoomProperty(), Boolean.class)

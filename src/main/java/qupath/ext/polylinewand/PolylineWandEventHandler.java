@@ -6,7 +6,6 @@ import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
-import javafx.scene.input.ScrollEvent;
 import qupath.ext.polylinewand.engine.BrushEngine;
 import qupath.ext.polylinewand.engine.EngineFactory;
 import qupath.lib.geom.Point2;
@@ -103,28 +102,6 @@ public final class PolylineWandEventHandler implements EventHandler<MouseEvent> 
             if (engine != null && e.getButton() == MouseButton.PRIMARY) {
                 onRelease(e);
             }
-        }
-    }
-
-    public void handleScroll(ScrollEvent e) {
-        if (viewer == null) {
-            return;
-        }
-        // Alt+wheel adjusts brush radius. Plain wheel (and other modifiers) is left
-        // alone so QuPath's normal pan/zoom continues to work as expected.
-        if (!e.isAltDown() || e.isControlDown() || e.isShiftDown()) {
-            return;
-        }
-        double current = PolylineWandParameters.getBrushRadius();
-        double step = Math.max(1.0, current * 0.1);
-        double next = current + (e.getDeltaY() > 0 ? step : -step);
-        next = Math.max(1.0, next);
-        PolylineWandParameters.brushRadiusProperty().set(next);
-        e.consume();
-        if (overlay != null) {
-            Point2D p = viewer.componentPointToImagePoint(e.getX(), e.getY(), null, false);
-            overlay.updateCursor(p.getX(), p.getY(), effectiveImageRadius(next),
-                    PolylineWandParameters.getBrushMode());
         }
     }
 

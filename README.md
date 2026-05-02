@@ -28,7 +28,7 @@ The toolbar exposes a single **Polyline Wand** tool. Right-click the toolbar but
 - **Auto endpoint erase.** If the stroke begins near an endpoint of a polyline, the brush switches to erase-from-end mode (the line shortens from that end). Hold Shift to override and edit at an endpoint normally.
 - **LineROI promotion.** Editing a 2-point `LineROI` for the first time densifies it into a `PolylineROI` (default 32 vertices) so the engines have interior vertices to work with.
 - **Throttled commits.** Mid-drag `setROI` calls are throttled to ~30 Hz with `isChanging=true`, so the undo stack stays clean (one entry per stroke).
-- **Alt+wheel brush size.** While the tool is active, hold Alt and scroll the wheel to adjust brush radius live. Plain wheel is left to QuPath for normal pan/zoom.
+- **Brush size.** Adjust via the right-click toolbar menu ("Set brush radius...") or the Preferences pane. The tool does not bind any scroll-wheel shortcut so all of QuPath's normal zoom/pan gestures stay untouched.
 
 ## Right-click toolbar menu
 

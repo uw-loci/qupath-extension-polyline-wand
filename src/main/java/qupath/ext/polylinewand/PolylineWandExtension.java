@@ -81,10 +81,9 @@ public final class PolylineWandExtension implements QuPathExtension {
                         action.setLongText(String.format(
                                 "(%s) Polyline Wand: brush mode.%n"
                                         + "Click and drag to edit a selected line or polyline.%n"
-                                        + "Mouse-wheel adjusts brush radius.%n"
                                         + "Hold Shift to override auto erase-at-endpoint.%n"
                                         + "Right-click toolbar button for engine choice, scissors mode, "
-                                        + "and other options.",
+                                        + "brush radius, and other options.",
                                 chord.getDisplayText()));
                     }
                 };
