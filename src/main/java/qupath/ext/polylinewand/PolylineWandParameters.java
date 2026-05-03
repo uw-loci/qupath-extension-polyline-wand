@@ -91,6 +91,12 @@ public final class PolylineWandParameters {
     private static final DoubleProperty directVelocityDampingStrength =
             PathPrefs.createPersistentPreference("polylineWandDirectVelocityDamping", 0.0);
 
+    private static final BooleanProperty directPixelSensitivityEnabled =
+            PathPrefs.createPersistentPreference("polylineWandDirectPixelSensitivityEnabled", false);
+
+    private static final DoubleProperty directPixelSensitivity =
+            PathPrefs.createPersistentPreference("polylineWandDirectPixelSensitivity", 2.0);
+
     // ------------------------------------------------------------------
     // Engine B: Area proxy + skeletonize
     // ------------------------------------------------------------------
@@ -175,6 +181,8 @@ public final class PolylineWandParameters {
     public static DoubleProperty directDensifySpacingRatioProperty() { return directDensifySpacingRatio; }
     public static IntegerProperty directMaxInsertionsPerStrokeProperty() { return directMaxInsertionsPerStroke; }
     public static DoubleProperty directVelocityDampingStrengthProperty() { return directVelocityDampingStrength; }
+    public static BooleanProperty directPixelSensitivityEnabledProperty() { return directPixelSensitivityEnabled; }
+    public static DoubleProperty directPixelSensitivityProperty() { return directPixelSensitivity; }
 
     public static DoubleProperty proxyBufferWidthFractionProperty() { return proxyBufferWidthFraction; }
     public static DoubleProperty proxyBufferMinPxProperty() { return proxyBufferMinPx; }
@@ -218,6 +226,8 @@ public final class PolylineWandParameters {
     public static double getDirectDensifySpacingRatio() { return directDensifySpacingRatio.get(); }
     public static int getDirectMaxInsertionsPerStroke() { return directMaxInsertionsPerStroke.get(); }
     public static double getDirectVelocityDampingStrength() { return directVelocityDampingStrength.get(); }
+    public static boolean getDirectPixelSensitivityEnabled() { return directPixelSensitivityEnabled.get(); }
+    public static double getDirectPixelSensitivity() { return directPixelSensitivity.get(); }
 
     public static double getProxyBufferWidthFraction() { return proxyBufferWidthFraction.get(); }
     public static double getProxyBufferMinPx() { return proxyBufferMinPx.get(); }
@@ -262,6 +272,8 @@ public final class PolylineWandParameters {
         directDensifySpacingRatio.set(0.25);
         directMaxInsertionsPerStroke.set(5000);
         directVelocityDampingStrength.set(0.0);
+        directPixelSensitivityEnabled.set(false);
+        directPixelSensitivity.set(2.0);
 
         proxyBufferWidthFraction.set(0.25);
         proxyBufferMinPx.set(0.5);

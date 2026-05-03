@@ -175,6 +175,25 @@ public final class PolylineWandPreferences {
                         + "local segment.")
                 .build());
 
+        items.add(new PropertyItemBuilder<>(PolylineWandParameters.directPixelSensitivityEnabledProperty(), Boolean.class)
+                .name("Pixel-aware push")
+                .category(CATEGORY_DIRECT)
+                .description("When ON, sample pixels around the cursor at press-time, capture a "
+                        + "seed color, and modulate per-vertex displacement by similarity to that "
+                        + "seed. Vertices on tissue similar to the seed get the full push; vertices "
+                        + "that cross onto dissimilar tissue (edges) get little or no push -- "
+                        + "matching how QuPath's built-in wand grows polygons until it hits a "
+                        + "boundary.")
+                .build());
+
+        items.add(new PropertyItemBuilder<>(PolylineWandParameters.directPixelSensitivityProperty(), Double.class)
+                .name("Pixel sensitivity")
+                .category(CATEGORY_DIRECT)
+                .description("How forgiving the pixel-similarity check is. Higher values let the "
+                        + "push cross more pixel-value variation before fading out (matches the "
+                        + "shape of QuPath's wand 'sensitivity' preference). Default 2.0.")
+                .build());
+
         // ---- Engine B: Area proxy ----
 
         items.add(new PropertyItemBuilder<>(PolylineWandParameters.proxyBufferWidthFractionProperty(), Double.class)

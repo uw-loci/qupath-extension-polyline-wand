@@ -32,6 +32,7 @@ public final class DirectVertexEngine implements BrushEngine {
     private Point2 lastBrushCenter = null;
     private EndpointSide eraseEnd = EndpointSide.NONE;
     private int indexedTopologyVersion = -1;
+    private PixelSensitivityField sensitivity = null;
 
     @Override
     public void beginStroke(StrokeContext ctx, Point2 imgPt) {
@@ -50,6 +51,13 @@ public final class DirectVertexEngine implements BrushEngine {
         firstTouched = Integer.MAX_VALUE;
         lastTouched = Integer.MIN_VALUE;
         eraseEnd = decideEraseEnd(ctx, imgPt);
+        if (PolylineWandParameters.getDirectPixelSensitivityEnabled()) {
+            sensitivity = new PixelSensitivityField(ctx.getViewer(),
+                    PolylineWandParameters.getDirectPixelSensitivity());
+            sensitivity.rebuildAt(imgPt);
+        } else {
+            sensitivity = null;
+        }
     }
 
     private EndpointSide decideEraseEnd(StrokeContext ctx, Point2 imgPt) {
@@ -101,6 +109,11 @@ public final class DirectVertexEngine implements BrushEngine {
         if (hits.isEmpty()) {
             return;
         }
+        // Refresh the pixel-sensitivity patch if the brush has wandered out of it.
+        if (sensitivity != null
+                && sensitivity.isOutsidePatch(brushCenter.getX(), brushCenter.getY())) {
+            sensitivity.rebuildAt(brushCenter);
+        }
         FalloffProfile falloff = PolylineWandParameters.getDirectFalloffProfile();
         double radialBias = clamp01(PolylineWandParameters.getDirectRadialBias());
         double speed = ctx.getVelocity().getSpeed();
@@ -115,6 +128,10 @@ public final class DirectVertexEngine implements BrushEngine {
             if (w <= 0) {
                 continue;
             }
+            double pixelW = sensitivity == null ? 1.0 : sensitivity.weightAt(v.getX(), v.getY());
+            if (pixelW <= 0) {
+                continue;
+            }
             double radialUx = 0, radialUy = 0;
             if (dist > 1e-9) {
                 radialUx = dx / dist;
@@ -122,7 +139,7 @@ public final class DirectVertexEngine implements BrushEngine {
             }
             double moveX = (1 - radialBias) * motion.getX() + radialBias * radialUx * motionMag;
             double moveY = (1 - radialBias) * motion.getY() + radialBias * radialUy * motionMag;
-            double scale = w * damping;
+            double scale = w * damping * pixelW;
             working.setPoint(idx, new Point2(v.getX() + moveX * scale, v.getY() + moveY * scale));
             firstTouched = Math.min(firstTouched, idx);
             lastTouched = Math.max(lastTouched, idx);

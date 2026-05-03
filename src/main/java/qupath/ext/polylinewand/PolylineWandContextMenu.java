@@ -146,6 +146,19 @@ public final class PolylineWandContextMenu {
                 PolylineWandParameters.getDirectMaxInsertionsPerStroke(),
                 PolylineWandParameters.directMaxInsertionsPerStrokeProperty()::set));
         m.getItems().add(maxIns);
+
+        CheckMenuItem pixelAware = new CheckMenuItem("Pixel-aware push");
+        pixelAware.setSelected(PolylineWandParameters.getDirectPixelSensitivityEnabled());
+        pixelAware.setOnAction(e -> PolylineWandParameters.directPixelSensitivityEnabledProperty()
+                .set(pixelAware.isSelected()));
+        m.getItems().add(pixelAware);
+
+        MenuItem sens = new MenuItem("Set pixel sensitivity...");
+        sens.setOnAction(e -> promptDouble("Pixel sensitivity",
+                "Higher = push crosses more variation before fading (default 2.0):",
+                PolylineWandParameters.getDirectPixelSensitivity(),
+                PolylineWandParameters.directPixelSensitivityProperty()::set));
+        m.getItems().add(sens);
     }
 
     private static void buildProxySettings(Menu m) {
