@@ -6,15 +6,14 @@ import javafx.beans.property.IntegerProperty;
 import javafx.beans.property.ObjectProperty;
 import qupath.ext.polylinewand.engine.direct.FalloffProfile;
 import qupath.ext.polylinewand.engine.field.KernelType;
-import qupath.ext.polylinewand.engine.proxy.DisconnectionPolicy;
 import qupath.lib.gui.prefs.PathPrefs;
 
 /**
  * Persistent preferences for the Polyline Wand and Brush.
  * <p>
  * All settings survive QuPath restarts via PathPrefs.
- * Engine-specific keys are namespaced (direct*, proxy*, field*) so a
- * single Reset call can restore every value to its default.
+ * Engine-specific keys are namespaced (direct*, field*) so a single
+ * Reset call can restore every value to its default.
  */
 public final class PolylineWandParameters {
 
@@ -98,39 +97,7 @@ public final class PolylineWandParameters {
             PathPrefs.createPersistentPreference("polylineWandDirectPixelSensitivity", 2.0);
 
     // ------------------------------------------------------------------
-    // Engine B: Area proxy + skeletonize
-    // ------------------------------------------------------------------
-
-    private static final DoubleProperty proxyBufferWidthFraction =
-            PathPrefs.createPersistentPreference("polylineWandProxyBufferWidthFraction", 0.25);
-
-    private static final DoubleProperty proxyBufferMinPx =
-            PathPrefs.createPersistentPreference("polylineWandProxyBufferMinPx", 0.5);
-
-    private static final IntegerProperty proxyMaskMaxDim =
-            PathPrefs.createPersistentPreference("polylineWandProxyMaskMaxDim", 4096);
-
-    private static final DoubleProperty proxySimplifyTolerance =
-            PathPrefs.createPersistentPreference("polylineWandProxySimplifyTolerance", 1.0);
-
-    private static final ObjectProperty<DisconnectionPolicy> proxyDisconnectionPolicy =
-            PathPrefs.createPersistentPreference("polylineWandProxyDisconnectPolicy",
-                    DisconnectionPolicy.KEEP_LONGEST, DisconnectionPolicy.class);
-
-    private static final IntegerProperty proxyMidStrokePreviewMs =
-            PathPrefs.createPersistentPreference("polylineWandProxyMidStrokePreviewMs", 200);
-
-    private static final BooleanProperty proxyAnchorEndpoints =
-            PathPrefs.createPersistentPreference("polylineWandProxyAnchorEndpoints", true);
-
-    private static final BooleanProperty proxyCloseGapsBeforeThinning =
-            PathPrefs.createPersistentPreference("polylineWandProxyCloseGapsBeforeThinning", true);
-
-    private static final IntegerProperty proxyOverlayFillAlpha =
-            PathPrefs.createPersistentPreference("polylineWandProxyOverlayFillAlpha", 80);
-
-    // ------------------------------------------------------------------
-    // Engine C: Arc-length displacement field
+    // Engine B: Arc-length displacement field
     // ------------------------------------------------------------------
 
     private static final ObjectProperty<KernelType> fieldKernelType =
@@ -184,16 +151,6 @@ public final class PolylineWandParameters {
     public static BooleanProperty directPixelSensitivityEnabledProperty() { return directPixelSensitivityEnabled; }
     public static DoubleProperty directPixelSensitivityProperty() { return directPixelSensitivity; }
 
-    public static DoubleProperty proxyBufferWidthFractionProperty() { return proxyBufferWidthFraction; }
-    public static DoubleProperty proxyBufferMinPxProperty() { return proxyBufferMinPx; }
-    public static IntegerProperty proxyMaskMaxDimProperty() { return proxyMaskMaxDim; }
-    public static DoubleProperty proxySimplifyToleranceProperty() { return proxySimplifyTolerance; }
-    public static ObjectProperty<DisconnectionPolicy> proxyDisconnectionPolicyProperty() { return proxyDisconnectionPolicy; }
-    public static IntegerProperty proxyMidStrokePreviewMsProperty() { return proxyMidStrokePreviewMs; }
-    public static BooleanProperty proxyAnchorEndpointsProperty() { return proxyAnchorEndpoints; }
-    public static BooleanProperty proxyCloseGapsBeforeThinningProperty() { return proxyCloseGapsBeforeThinning; }
-    public static IntegerProperty proxyOverlayFillAlphaProperty() { return proxyOverlayFillAlpha; }
-
     public static ObjectProperty<KernelType> fieldKernelTypeProperty() { return fieldKernelType; }
     public static DoubleProperty fieldKernelSigmaFractionProperty() { return fieldKernelSigmaFraction; }
     public static DoubleProperty fieldDisplacementStrengthProperty() { return fieldDisplacementStrength; }
@@ -228,16 +185,6 @@ public final class PolylineWandParameters {
     public static double getDirectVelocityDampingStrength() { return directVelocityDampingStrength.get(); }
     public static boolean getDirectPixelSensitivityEnabled() { return directPixelSensitivityEnabled.get(); }
     public static double getDirectPixelSensitivity() { return directPixelSensitivity.get(); }
-
-    public static double getProxyBufferWidthFraction() { return proxyBufferWidthFraction.get(); }
-    public static double getProxyBufferMinPx() { return proxyBufferMinPx.get(); }
-    public static int getProxyMaskMaxDim() { return proxyMaskMaxDim.get(); }
-    public static double getProxySimplifyTolerance() { return proxySimplifyTolerance.get(); }
-    public static DisconnectionPolicy getProxyDisconnectionPolicy() { return proxyDisconnectionPolicy.get(); }
-    public static int getProxyMidStrokePreviewMs() { return proxyMidStrokePreviewMs.get(); }
-    public static boolean getProxyAnchorEndpoints() { return proxyAnchorEndpoints.get(); }
-    public static boolean getProxyCloseGapsBeforeThinning() { return proxyCloseGapsBeforeThinning.get(); }
-    public static int getProxyOverlayFillAlpha() { return proxyOverlayFillAlpha.get(); }
 
     public static KernelType getFieldKernelType() { return fieldKernelType.get(); }
     public static double getFieldKernelSigmaFraction() { return fieldKernelSigmaFraction.get(); }
@@ -274,16 +221,6 @@ public final class PolylineWandParameters {
         directVelocityDampingStrength.set(0.0);
         directPixelSensitivityEnabled.set(false);
         directPixelSensitivity.set(2.0);
-
-        proxyBufferWidthFraction.set(0.25);
-        proxyBufferMinPx.set(0.5);
-        proxyMaskMaxDim.set(4096);
-        proxySimplifyTolerance.set(1.0);
-        proxyDisconnectionPolicy.set(DisconnectionPolicy.KEEP_LONGEST);
-        proxyMidStrokePreviewMs.set(200);
-        proxyAnchorEndpoints.set(true);
-        proxyCloseGapsBeforeThinning.set(true);
-        proxyOverlayFillAlpha.set(80);
 
         fieldKernelType.set(KernelType.COSINE);
         fieldKernelSigmaFraction.set(0.33);

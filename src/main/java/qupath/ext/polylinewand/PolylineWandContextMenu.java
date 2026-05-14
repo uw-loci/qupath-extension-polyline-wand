@@ -13,7 +13,6 @@ import javafx.scene.control.ToggleGroup;
 import javafx.scene.layout.Region;
 import qupath.ext.polylinewand.engine.direct.FalloffProfile;
 import qupath.ext.polylinewand.engine.field.KernelType;
-import qupath.ext.polylinewand.engine.proxy.DisconnectionPolicy;
 
 /**
  * Right-click context menu for the Polyline Wand toolbar button.
@@ -105,9 +104,6 @@ public final class PolylineWandContextMenu {
             case DIRECT_VERTEX:
                 buildDirectSettings(m);
                 break;
-            case AREA_PROXY:
-                buildProxySettings(m);
-                break;
             case DISPLACEMENT_FIELD:
                 buildFieldSettings(m);
                 break;
@@ -159,45 +155,6 @@ public final class PolylineWandContextMenu {
                 PolylineWandParameters.getDirectPixelSensitivity(),
                 PolylineWandParameters.directPixelSensitivityProperty()::set));
         m.getItems().add(sens);
-    }
-
-    private static void buildProxySettings(Menu m) {
-        Menu policy = new Menu("Disconnection policy");
-        ToggleGroup g = new ToggleGroup();
-        for (DisconnectionPolicy p : DisconnectionPolicy.values()) {
-            RadioMenuItem item = new RadioMenuItem(p.name());
-            item.setToggleGroup(g);
-            item.setSelected(PolylineWandParameters.getProxyDisconnectionPolicy() == p);
-            item.setOnAction(e -> PolylineWandParameters.proxyDisconnectionPolicyProperty().set(p));
-            policy.getItems().add(item);
-        }
-        m.getItems().add(policy);
-
-        CheckMenuItem anchor = new CheckMenuItem("Anchor original endpoints");
-        anchor.setSelected(PolylineWandParameters.getProxyAnchorEndpoints());
-        anchor.setOnAction(e -> PolylineWandParameters.proxyAnchorEndpointsProperty()
-                .set(anchor.isSelected()));
-        m.getItems().add(anchor);
-
-        CheckMenuItem closeGaps = new CheckMenuItem("Close gaps before thinning");
-        closeGaps.setSelected(PolylineWandParameters.getProxyCloseGapsBeforeThinning());
-        closeGaps.setOnAction(e -> PolylineWandParameters.proxyCloseGapsBeforeThinningProperty()
-                .set(closeGaps.isSelected()));
-        m.getItems().add(closeGaps);
-
-        MenuItem buf = new MenuItem("Set buffer fraction...");
-        buf.setOnAction(e -> promptDouble("Buffer width fraction",
-                "Fraction of brush radius used as proxy buffer width:",
-                PolylineWandParameters.getProxyBufferWidthFraction(),
-                PolylineWandParameters.proxyBufferWidthFractionProperty()::set));
-        m.getItems().add(buf);
-
-        MenuItem simp = new MenuItem("Set simplify tolerance...");
-        simp.setOnAction(e -> promptDouble("Skeleton simplify tolerance",
-                "Visvalingam-Whyatt tolerance:",
-                PolylineWandParameters.getProxySimplifyTolerance(),
-                PolylineWandParameters.proxySimplifyToleranceProperty()::set));
-        m.getItems().add(simp);
     }
 
     private static void buildFieldSettings(Menu m) {

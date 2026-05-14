@@ -63,11 +63,10 @@ public final class PolylineWandOverlay extends AbstractOverlay implements PathOv
         double rOuter = cursorImageRadius;
         double scale = clamp(PolylineWandParameters.getCursorEffectiveScale(), 0.25, 1.0);
         double rInner = rOuter * scale;
-        // Erase mode + scissors / area-proxy use a hard radius -- no taper, so skip
-        // the inner-vs-outer split for those modes (the full circle IS the effect).
+        // Erase mode + scissors use a hard radius -- no taper, so skip the
+        // inner-vs-outer split for those modes (the full circle IS the effect).
         boolean hardEdge = currentMode == BrushMode.ERASE_FROM_END
-                || currentMode == BrushMode.CUT_AT_POINT
-                || PolylineWandParameters.getEngineKind() == EngineKind.AREA_PROXY;
+                || currentMode == BrushMode.CUT_AT_POINT;
 
         Color outlineColor = resolveOutlineColor(currentMode);
         Object oldAa = g2d.getRenderingHint(RenderingHints.KEY_ANTIALIASING);

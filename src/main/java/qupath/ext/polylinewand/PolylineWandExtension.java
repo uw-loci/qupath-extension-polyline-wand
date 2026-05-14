@@ -48,8 +48,7 @@ public final class PolylineWandExtension implements QuPathExtension {
     @Override
     public String getDescription() {
         return "Brush/wand-style editor for line and polyline annotations. "
-                + "Three engines: direct vertex push, area-proxy skeletonize, "
-                + "arc-length displacement field.";
+                + "Two engines: direct vertex push, arc-length displacement field.";
     }
 
     @Override

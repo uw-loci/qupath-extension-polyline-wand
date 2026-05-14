@@ -9,9 +9,6 @@ public enum EngineKind {
     /** Direct vertex displacement with a uniform-grid spatial index. */
     DIRECT_VERTEX("Direct vertex push"),
 
-    /** Buffer to a thin area, brush as area, skeletonize back. */
-    AREA_PROXY("Area proxy + skeletonize"),
-
     /** Arc-length parameterized displacement field with a locked active window. */
     DISPLACEMENT_FIELD("Displacement field");
 

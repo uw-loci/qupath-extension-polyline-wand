@@ -4,7 +4,6 @@ import javafx.collections.ObservableList;
 import org.controlsfx.control.PropertySheet;
 import qupath.ext.polylinewand.engine.direct.FalloffProfile;
 import qupath.ext.polylinewand.engine.field.KernelType;
-import qupath.ext.polylinewand.engine.proxy.DisconnectionPolicy;
 import qupath.fx.prefs.controlsfx.PropertyItemBuilder;
 import qupath.lib.gui.QuPathGUI;
 
@@ -17,7 +16,6 @@ public final class PolylineWandPreferences {
 
     private static final String CATEGORY = "Polyline Wand";
     private static final String CATEGORY_DIRECT = "Polyline Wand: Direct vertex push";
-    private static final String CATEGORY_PROXY = "Polyline Wand: Area proxy";
     private static final String CATEGORY_FIELD = "Polyline Wand: Displacement field";
 
     private PolylineWandPreferences() {}
@@ -39,8 +37,6 @@ public final class PolylineWandPreferences {
                 .description("Which brush engine the tool uses.\n\n"
                         + "Direct vertex push (default): per-frame brush displaces vertices in radius. "
                         + "Most reactive feel; the brush can start anywhere and pull the line toward it.\n\n"
-                        + "Area proxy + skeletonize: buffers the polyline to a thin area, edits as area, "
-                        + "skeletonizes back on release. Best for bold reshapes.\n\n"
                         + "Displacement field: locks an active arc-length window at press; per-vertex "
                         + "cosine kernel + velocity damping for the most tactile feel.")
                 .build());
@@ -194,67 +190,7 @@ public final class PolylineWandPreferences {
                         + "shape of QuPath's wand 'sensitivity' preference). Default 2.0.")
                 .build());
 
-        // ---- Engine B: Area proxy ----
-
-        items.add(new PropertyItemBuilder<>(PolylineWandParameters.proxyBufferWidthFractionProperty(), Double.class)
-                .name("Buffer width fraction")
-                .category(CATEGORY_PROXY)
-                .description("Buffer distance for the proxy area = max(buffer min, fraction * brush radius).")
-                .build());
-
-        items.add(new PropertyItemBuilder<>(PolylineWandParameters.proxyBufferMinPxProperty(), Double.class)
-                .name("Buffer minimum (px)")
-                .category(CATEGORY_PROXY)
-                .description("Hard floor on the proxy buffer distance, in image pixels.")
-                .build());
-
-        items.add(new PropertyItemBuilder<>(PolylineWandParameters.proxyMaskMaxDimProperty(), Integer.class)
-                .name("Skeleton mask max dimension")
-                .category(CATEGORY_PROXY)
-                .description("Maximum width/height of the raster mask used by Zhang-Suen thinning. "
-                        + "Caps skeletonization cost on huge polylines.")
-                .build());
-
-        items.add(new PropertyItemBuilder<>(PolylineWandParameters.proxySimplifyToleranceProperty(), Double.class)
-                .name("Skeleton simplify tolerance")
-                .category(CATEGORY_PROXY)
-                .description("Visvalingam-Whyatt tolerance applied to the traced skeleton.")
-                .build());
-
-        items.add(new PropertyItemBuilder<>(PolylineWandParameters.proxyDisconnectionPolicyProperty(), DisconnectionPolicy.class)
-                .name("Disconnection policy")
-                .category(CATEGORY_PROXY)
-                .description("What to do when the brush splits the proxy area into multiple components.")
-                .build());
-
-        items.add(new PropertyItemBuilder<>(PolylineWandParameters.proxyMidStrokePreviewMsProperty(), Integer.class)
-                .name("Mid-stroke preview (ms)")
-                .category(CATEGORY_PROXY)
-                .description("How often to run a low-priority skeletonization during the stroke for "
-                        + "visual confirmation. 0 disables.")
-                .build());
-
-        items.add(new PropertyItemBuilder<>(PolylineWandParameters.proxyAnchorEndpointsProperty(), Boolean.class)
-                .name("Anchor original endpoints")
-                .category(CATEGORY_PROXY)
-                .description("Splice the original polyline's endpoint coordinates back onto the "
-                        + "skeleton. Compensates for Zhang-Suen's 1-2 pixel endpoint erosion.")
-                .build());
-
-        items.add(new PropertyItemBuilder<>(PolylineWandParameters.proxyCloseGapsBeforeThinningProperty(), Boolean.class)
-                .name("Close gaps before thinning")
-                .category(CATEGORY_PROXY)
-                .description("Run a 3x3 morphological close on the raster mask before Zhang-Suen "
-                        + "thinning. Reduces skeleton spurs from raster jaggies.")
-                .build());
-
-        items.add(new PropertyItemBuilder<>(PolylineWandParameters.proxyOverlayFillAlphaProperty(), Integer.class)
-                .name("Proxy overlay alpha")
-                .category(CATEGORY_PROXY)
-                .description("Translucency (0-255) of the working-area fill drawn during the stroke.")
-                .build());
-
-        // ---- Engine C: Displacement field ----
+        // ---- Engine B: Displacement field ----
 
         items.add(new PropertyItemBuilder<>(PolylineWandParameters.fieldKernelTypeProperty(), KernelType.class)
                 .name("Kernel")
