@@ -23,6 +23,7 @@ public final class DisplacementFieldEngine implements BrushEngine {
     private volatile boolean dirty = false;
     private EndpointSide eraseEnd = EndpointSide.NONE;
     private double brushRadius;
+    private Point2 prevBrushCenter;
 
     @Override
     public void beginStroke(StrokeContext ctx, Point2 imgPt) {
@@ -35,6 +36,7 @@ public final class DisplacementFieldEngine implements BrushEngine {
         brushRadius = ctx.getBrushRadius();
         range = ActiveRange.compute(curve, imgPt, 2.0 * brushRadius);
         eraseEnd = decideEraseEnd(ctx, imgPt);
+        prevBrushCenter = imgPt;
         publishPreview();
     }
 
@@ -65,6 +67,7 @@ public final class DisplacementFieldEngine implements BrushEngine {
                 applyPushDisplacement(ctx, imgPt);
                 break;
         }
+        prevBrushCenter = imgPt;
         curve.recomputeFromIndex(Math.max(0, range.startIdx));
         densifyActive(brushRadius);
         publishPreview();
@@ -74,11 +77,17 @@ public final class DisplacementFieldEngine implements BrushEngine {
         KernelType kt = PolylineWandParameters.getFieldKernelType();
         double sigmaFrac = PolylineWandParameters.getFieldKernelSigmaFraction();
         double strength = PolylineWandParameters.getFieldDisplacementStrength();
-        double dampStrength = PolylineWandParameters.getFieldVelocityDampingStrength();
-        double dampMin = PolylineWandParameters.getFieldVelocityDampingMin();
         boolean guard = PolylineWandParameters.getFieldSelfIntersectionGuard();
 
-        double[] vUnit = ctx.getVelocity().unitDirection();
+        // Per-frame cursor motion. Project onto each vertex's local normal so
+        // only the perpendicular component pushes -- tangential drags along
+        // the line contribute zero push, which prevents the cascading-bulge
+        // and loop artifacts that arise from a proximity-driven push.
+        double dvx = brushCenter.getX() - prevBrushCenter.getX();
+        double dvy = brushCenter.getY() - prevBrushCenter.getY();
+        if (dvx == 0.0 && dvy == 0.0) {
+            return;
+        }
 
         for (int i = range.startIdx; i <= range.endIdx; i++) {
             Point2 v = curve.get(i);
@@ -91,21 +100,13 @@ public final class DisplacementFieldEngine implements BrushEngine {
             }
             double nx = curve.normalX(i);
             double ny = curve.normalY(i);
-            // Displacement is along the normal, in the direction that moves vertex AWAY from brush center
-            // (push). Sign is determined by sign of dot(d, n).
-            double dotDN = dx * nx + dy * ny;
-            double sign = dotDN >= 0 ? 1.0 : -1.0;
-            // Magnitude scales with how deep the vertex is inside the brush.
-            double depth = brushRadius - dist;
-            // Velocity damping by perpendicular motion magnitude.
-            double damping = 1.0;
-            if (dampStrength > 0 && (vUnit[0] != 0 || vUnit[1] != 0)) {
-                double absDot = Math.abs(vUnit[0] * nx + vUnit[1] * ny);
-                damping = Math.max(dampMin, 1.0 - dampStrength * absDot);
+            double dn = dvx * nx + dvy * ny;
+            if (dn == 0.0) {
+                continue;
             }
-            double mag = w * strength * depth * damping;
-            Point2 candidate = new Point2(v.getX() + sign * nx * mag,
-                                          v.getY() + sign * ny * mag);
+            double mag = w * strength * dn;
+            Point2 candidate = new Point2(v.getX() + nx * mag,
+                                          v.getY() + ny * mag);
             if (guard && SelfIntersectionGuard.wouldSelfIntersect(curve,
                     range.startIdx, range.endIdx, i, candidate)) {
                 continue;

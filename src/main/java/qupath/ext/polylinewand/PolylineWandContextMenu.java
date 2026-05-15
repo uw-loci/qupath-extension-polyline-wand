@@ -181,12 +181,12 @@ public final class PolylineWandContextMenu {
                 .set(catmull.isSelected()));
         m.getItems().add(catmull);
 
-        MenuItem damp = new MenuItem("Set velocity damping...");
-        damp.setOnAction(e -> promptDouble("Velocity damping",
-                "0 = none, 1 = full perpendicular damping:",
-                PolylineWandParameters.getFieldVelocityDampingStrength(),
-                PolylineWandParameters.fieldVelocityDampingStrengthProperty()::set));
-        m.getItems().add(damp);
+        MenuItem strength = new MenuItem("Set displacement strength...");
+        strength.setOnAction(e -> promptDouble("Displacement strength",
+                "Multiplier on per-frame perpendicular push (1.0 = 1:1 with cursor delta):",
+                PolylineWandParameters.getFieldDisplacementStrength(),
+                PolylineWandParameters.fieldDisplacementStrengthProperty()::set));
+        m.getItems().add(strength);
     }
 
     private static void promptDouble(String title, String header, double current,

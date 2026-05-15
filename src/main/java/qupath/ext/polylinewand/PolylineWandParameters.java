@@ -110,12 +110,6 @@ public final class PolylineWandParameters {
     private static final DoubleProperty fieldDisplacementStrength =
             PathPrefs.createPersistentPreference("polylineWandFieldDisplacementStrength", 1.0);
 
-    private static final DoubleProperty fieldVelocityDampingStrength =
-            PathPrefs.createPersistentPreference("polylineWandFieldVelocityDamping", 0.6);
-
-    private static final DoubleProperty fieldVelocityDampingMin =
-            PathPrefs.createPersistentPreference("polylineWandFieldVelocityDampingMin", 0.25);
-
     private static final DoubleProperty fieldDensifyDivisor =
             PathPrefs.createPersistentPreference("polylineWandFieldDensifyDivisor", 4.0);
 
@@ -154,8 +148,6 @@ public final class PolylineWandParameters {
     public static ObjectProperty<KernelType> fieldKernelTypeProperty() { return fieldKernelType; }
     public static DoubleProperty fieldKernelSigmaFractionProperty() { return fieldKernelSigmaFraction; }
     public static DoubleProperty fieldDisplacementStrengthProperty() { return fieldDisplacementStrength; }
-    public static DoubleProperty fieldVelocityDampingStrengthProperty() { return fieldVelocityDampingStrength; }
-    public static DoubleProperty fieldVelocityDampingMinProperty() { return fieldVelocityDampingMin; }
     public static DoubleProperty fieldDensifyDivisorProperty() { return fieldDensifyDivisor; }
     public static BooleanProperty fieldUseCatmullRomDensifyProperty() { return fieldUseCatmullRomDensify; }
     public static BooleanProperty fieldSelfIntersectionGuardProperty() { return fieldSelfIntersectionGuard; }
@@ -189,8 +181,6 @@ public final class PolylineWandParameters {
     public static KernelType getFieldKernelType() { return fieldKernelType.get(); }
     public static double getFieldKernelSigmaFraction() { return fieldKernelSigmaFraction.get(); }
     public static double getFieldDisplacementStrength() { return fieldDisplacementStrength.get(); }
-    public static double getFieldVelocityDampingStrength() { return fieldVelocityDampingStrength.get(); }
-    public static double getFieldVelocityDampingMin() { return fieldVelocityDampingMin.get(); }
     public static double getFieldDensifyDivisor() { return fieldDensifyDivisor.get(); }
     public static boolean getFieldUseCatmullRomDensify() { return fieldUseCatmullRomDensify.get(); }
     public static boolean getFieldSelfIntersectionGuard() { return fieldSelfIntersectionGuard.get(); }
@@ -225,8 +215,6 @@ public final class PolylineWandParameters {
         fieldKernelType.set(KernelType.COSINE);
         fieldKernelSigmaFraction.set(0.33);
         fieldDisplacementStrength.set(1.0);
-        fieldVelocityDampingStrength.set(0.6);
-        fieldVelocityDampingMin.set(0.25);
         fieldDensifyDivisor.set(4.0);
         fieldUseCatmullRomDensify.set(false);
         fieldSelfIntersectionGuard.set(true);

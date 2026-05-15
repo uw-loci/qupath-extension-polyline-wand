@@ -16,7 +16,7 @@ Default keyboard chord: **Shift+P**.
 The toolbar exposes a single **Polyline Wand** tool. Right-click the toolbar button to switch between two engines at runtime; each tackles the "push the line around" problem differently.
 
 - **Direct vertex push** (default) -- per-frame brush displaces affected vertices with a configurable falloff (cosine / linear / gaussian). Local densification keeps sparse segments responsive. End-of-stroke runs a vertex compactor and self-intersection loop remover, so the line collapses cleanly when pushed over itself. Most reactive: the brush can start anywhere and pulls the line toward it whenever the line enters the brush footprint.
-- **Arc-length displacement field** -- locks an active arc-length window of 2x brush radius at press; per-frame work touches only K vertices in that window. Cosine kernel + perpendicular-velocity damping for the most tactile feel. Self-intersection guard refuses any per-vertex move that would create a local crossing.
+- **Arc-length displacement field** -- locks an active arc-length window of 2x brush radius at press; per-frame work touches only K vertices in that window. Each vertex is pushed by `kernel_weight * strength * (brush_motion . local_normal)`, so only the perpendicular component of cursor motion shifts the curve -- holding still or dragging along the line produces zero push. Self-intersection guard refuses any per-vertex move that would create a local crossing.
 
 ## Other features
 
@@ -49,7 +49,7 @@ All preferences live under the **Polyline Wand** category in QuPath's Preference
 
 - *Polyline Wand* -- engine choice, default mode, brush radius, radius-follows-zoom toggle, cursor effective scale, throttle, endpoint erase, line conversion, end-stroke simplify, cursor color, local region multiplier
 - *Polyline Wand: Direct vertex push* -- falloff profile, radial bias, densify, max insertions, velocity damping
-- *Polyline Wand: Displacement field* -- kernel type, sigma fraction, displacement strength, velocity damping, densify divisor, Catmull-Rom densify, self-intersection guard
+- *Polyline Wand: Displacement field* -- kernel type, sigma fraction, displacement strength, densify divisor, Catmull-Rom densify, self-intersection guard
 
 Reset everything from the right-click toolbar menu.
 

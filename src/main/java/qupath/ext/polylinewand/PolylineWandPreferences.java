@@ -207,20 +207,10 @@ public final class PolylineWandPreferences {
         items.add(new PropertyItemBuilder<>(PolylineWandParameters.fieldDisplacementStrengthProperty(), Double.class)
                 .name("Displacement strength")
                 .category(CATEGORY_FIELD)
-                .description("Global multiplier on per-frame displacement.")
-                .build());
-
-        items.add(new PropertyItemBuilder<>(PolylineWandParameters.fieldVelocityDampingStrengthProperty(), Double.class)
-                .name("Velocity damping")
-                .category(CATEGORY_FIELD)
-                .description("How much fast perpendicular motion reduces displacement (0 = none, 1 = full).")
-                .build());
-
-        items.add(new PropertyItemBuilder<>(PolylineWandParameters.fieldVelocityDampingMinProperty(), Double.class)
-                .name("Velocity damping floor")
-                .category(CATEGORY_FIELD)
-                .description("Minimum damping floor: perpendicular motion never reduces displacement "
-                        + "below this multiplier.")
+                .description("Global multiplier on per-frame displacement. Each frame, every "
+                        + "vertex in the active range is pushed by kernel_weight * strength * "
+                        + "(brush_motion . local_normal). 1.0 means a perpendicular cursor "
+                        + "delta of D pixels moves the closest vertex by D pixels.")
                 .build());
 
         items.add(new PropertyItemBuilder<>(PolylineWandParameters.fieldDensifyDivisorProperty(), Double.class)

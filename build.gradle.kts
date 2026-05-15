@@ -7,7 +7,7 @@ plugins {
 qupathExtension {
     name = "qupath-extension-polyline-wand"
     group = "io.github.uw-loci"
-    version = "0.3.0"
+    version = "0.3.1"
     description = "Brush/wand-style editor for line and polyline annotations. Two engines: direct vertex push, arc-length displacement field."
     automaticModule = "io.github.uw-loci.extension.polylinewand"
 }
