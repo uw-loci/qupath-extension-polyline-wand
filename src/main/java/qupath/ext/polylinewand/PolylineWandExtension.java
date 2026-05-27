@@ -16,8 +16,14 @@ import javafx.scene.input.KeyCodeCombination;
 import javafx.scene.input.KeyCombination;
 import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
+import javafx.scene.shape.ClosePath;
+import javafx.scene.shape.LineTo;
+import javafx.scene.shape.MoveTo;
+import javafx.scene.shape.Path;
 import javafx.scene.shape.StrokeLineCap;
 import javafx.scene.text.TextAlignment;
+import org.controlsfx.control.decoration.Decorator;
+import org.controlsfx.control.decoration.GraphicDecoration;
 import org.controlsfx.glyphfont.FontAwesome;
 import org.controlsfx.glyphfont.Glyph;
 import org.controlsfx.glyphfont.GlyphFontRegistry;
@@ -61,45 +67,42 @@ public final class PolylineWandExtension implements QuPathExtension {
 
         installPreferences(qupath);
 
-        // Tool installation on a daemon thread so any one-time class loads
-        // do not stall startup.
-        Thread t = new Thread(() -> {
-            PolylineWandEventHandler handler = new PolylineWandEventHandler();
+        // JavaFX nodes (Glyph/Canvas/StackPane) must be constructed AND have
+        // their children mutated on the FX thread. Doing icon composition on a
+        // background thread left the toolbar button blank.
+        PolylineWandEventHandler handler = new PolylineWandEventHandler();
+        Platform.runLater(() -> {
             Node icon = createModeAwareIcon(QuPathGUI.TOOLBAR_ICON_SIZE);
             PathTool tool = new PolylineWandPathTool(handler, "Polyline Wand", icon);
 
-            Platform.runLater(() -> {
-                KeyCodeCombination chord = new KeyCodeCombination(KeyCode.P, KeyCombination.SHIFT_DOWN);
-                qupath.getToolManager().installTool(tool, chord);
-                Action action = qupath.getToolManager().getToolAction(tool);
-                Runnable updateLongText = () -> {
-                    BrushMode mode = PolylineWandParameters.getBrushMode();
-                    if (mode == BrushMode.CUT_AT_POINT) {
-                        action.setLongText(String.format(
-                                "(%s) Polyline Wand: Scissors mode.%n"
-                                        + "Click on a selected polyline to cut it at the point "
-                                        + "nearest to the click. The polyline is split into two "
-                                        + "annotations.%n"
-                                        + "Right-click toolbar button to switch back to brush mode.",
-                                chord.getDisplayText()));
-                    } else {
-                        action.setLongText(String.format(
-                                "(%s) Polyline Wand: brush mode.%n"
-                                        + "Click and drag to edit a selected line or polyline.%n"
-                                        + "Hold Shift to override auto erase-at-endpoint.%n"
-                                        + "Right-click toolbar button for engine choice, scissors mode, "
-                                        + "brush radius, and other options.",
-                                chord.getDisplayText()));
-                    }
-                };
-                updateLongText.run();
-                PolylineWandParameters.brushModeProperty().addListener(
-                        (obs, oldMode, newMode) -> Platform.runLater(updateLongText));
-                attachContextMenuToToolbarButton(qupath);
-            });
-        }, "polyline-wand-init");
-        t.setDaemon(true);
-        t.start();
+            KeyCodeCombination chord = new KeyCodeCombination(KeyCode.P, KeyCombination.SHIFT_DOWN);
+            qupath.getToolManager().installTool(tool, chord);
+            Action action = qupath.getToolManager().getToolAction(tool);
+            Runnable updateLongText = () -> {
+                BrushMode mode = PolylineWandParameters.getBrushMode();
+                if (mode == BrushMode.CUT_AT_POINT) {
+                    action.setLongText(String.format(
+                            "(%s) Polyline Wand: Scissors mode.%n"
+                                    + "Click on a selected polyline to cut it at the point "
+                                    + "nearest to the click. The polyline is split into two "
+                                    + "annotations.%n"
+                                    + "Right-click toolbar button to switch back to brush mode.",
+                            chord.getDisplayText()));
+                } else {
+                    action.setLongText(String.format(
+                            "(%s) Polyline Wand: brush mode.%n"
+                                    + "Click and drag to edit a selected line or polyline.%n"
+                                    + "Hold Shift to override auto erase-at-endpoint.%n"
+                                    + "Right-click toolbar button for engine choice, scissors mode, "
+                                    + "brush radius, and other options.",
+                            chord.getDisplayText()));
+                }
+            };
+            updateLongText.run();
+            PolylineWandParameters.brushModeProperty().addListener(
+                    (obs, oldMode, newMode) -> Platform.runLater(updateLongText));
+            attachContextMenuToToolbarButton(qupath);
+        });
     }
 
     private void installPreferences(QuPathGUI qupath) {
@@ -228,6 +231,7 @@ public final class PolylineWandExtension implements QuPathExtension {
         if (button != null) {
             ContextMenu menu = PolylineWandContextMenu.build();
             button.setContextMenu(menu);
+            addContextMenuDecoration(button, menu);
             PolylineWandLogging.LOG.info("Polyline Wand context menu attached to toolbar button");
             return;
         }
@@ -236,6 +240,50 @@ public final class PolylineWandExtension implements QuPathExtension {
         } else {
             PolylineWandLogging.LOG.warn("Polyline Wand: could not find toolbar button after {} attempts", attempt);
         }
+    }
+
+    /**
+     * Add a small triangle to the bottom-right corner of the toolbar button so
+     * the right-click submenu is discoverable. Mirrors QuPath's own
+     * {@code ToolBarComponent.addContextMenuDecoration} (geometry, rotation and
+     * opacity copied verbatim) so this triangle reads as a peer of the ones on
+     * the built-in Line / Polyline tool buttons.
+     *
+     * <p>ControlsFX decorations require the node to be in a scene and are
+     * dropped when the graphic changes (the icon swaps between brush and
+     * scissors modes here), so the decoration is also re-applied via
+     * {@code sceneProperty} and {@code graphicProperty} listeners.</p>
+     */
+    private static void addContextMenuDecoration(ButtonBase button, ContextMenu menu) {
+        double width = 6;
+        Path triangle = new Path(
+                new MoveTo(0, 0),
+                new LineTo(width, 0),
+                new LineTo(width / 2.0, Math.sqrt(width * width / 2.0)),
+                new ClosePath());
+        triangle.setTranslateX(-width);
+        triangle.setTranslateY(-width);
+        triangle.setRotate(-90);
+        triangle.setStroke(null);
+        triangle.setOpacity(0.5);
+        triangle.fillProperty().bind(button.textFillProperty());
+        triangle.setOnMouseClicked(e -> {
+            menu.show(button, e.getScreenX(), e.getScreenY());
+            e.consume();
+        });
+        GraphicDecoration decoration = new GraphicDecoration(triangle, Pos.BOTTOM_RIGHT);
+        button.sceneProperty().addListener((obs, oldScene, newScene) -> Platform.runLater(() -> {
+            if (newScene != null) {
+                Decorator.addDecoration(button, decoration);
+            } else {
+                Decorator.removeDecoration(button, decoration);
+            }
+        }));
+        button.graphicProperty().addListener((obs, oldGraphic, newGraphic) -> {
+            Decorator.removeAllDecorations(button);
+            Platform.runLater(() -> Decorator.addDecoration(button, decoration));
+        });
+        Platform.runLater(() -> Decorator.addDecoration(button, decoration));
     }
 
     private static ButtonBase findToolbarButton(ToolBar toolBar) {
