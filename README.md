@@ -4,6 +4,8 @@ A QuPath extension that adds a brush/wand-style editor for **line** and **polyli
 
 Default keyboard chord: **Shift+P**.
 
+![Animated demo of the polyline wand brush reshaping a polyline annotation](images/polyline-wand-brush-demo.gif)
+
 ## Use cases
 
 - Tracing the leading edge of a tumor along a long polyline, then needing to push a section outward to include tissue you originally passed through.
