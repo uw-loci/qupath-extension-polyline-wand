@@ -96,4 +96,9 @@ ASCII-only in logs/strings/comments per project convention.
 
 ## License
 
-GPL-3.0 (matching the wizard wand extension and QuPath itself).
+[GNU General Public License v3.0](LICENSE)
+
+This extension is derived from QuPath, which is available under the GPL v3. It subclasses
+QuPath's `AbstractOverlay` and implements core tool/overlay interfaces (`PathTool`,
+`PathOverlay`), so it is a derivative work and is therefore also licensed under the GPL v3
+(matching the wizard wand extension and QuPath itself).
