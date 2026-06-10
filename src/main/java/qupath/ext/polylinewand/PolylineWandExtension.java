@@ -5,8 +5,6 @@ import javafx.beans.binding.Bindings;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.Parent;
-import javafx.scene.canvas.Canvas;
-import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.control.ButtonBase;
 import javafx.scene.control.ContentDisplay;
 import javafx.scene.control.ContextMenu;
@@ -14,9 +12,11 @@ import javafx.scene.control.ToolBar;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyCodeCombination;
 import javafx.scene.input.KeyCombination;
+import javafx.scene.layout.Pane;
 import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.ClosePath;
+import javafx.scene.shape.Line;
 import javafx.scene.shape.LineTo;
 import javafx.scene.shape.MoveTo;
 import javafx.scene.shape.Path;
@@ -129,12 +129,12 @@ public final class PolylineWandExtension implements QuPathExtension {
         Glyph wandGlyph = makeStyledGlyph(FontAwesome.Glyph.MAGIC, size);
         Glyph scissorsGlyph = makeStyledGlyph(FontAwesome.Glyph.CUT, size);
 
-        Canvas pushedLine = new Canvas(size, size);
-        // Repaint when the default-objects color changes so the polyline
-        // overlay tracks the QuPath theme.
-        PathPrefs.colorDefaultObjectsProperty().addListener((obs, oldVal, newVal) ->
-                Platform.runLater(() -> drawPushedPolyline(pushedLine, size)));
-        drawPushedPolyline(pushedLine, size);
+        // Retained-mode shape overlay of a "wand pushing a line". A Canvas is
+        // NOT rendered when it sits inside the graphic of a toolbar button --
+        // only shape/Glyph nodes are (the same reason the corner triangle, a
+        // Path, shows). The pushed polyline is therefore drawn with Line nodes
+        // rather than a Canvas; its stroke tracks the default-objects color.
+        Pane pushedLine = buildPushedPolylineOverlay(size);
 
         Runnable updateMode = () -> {
             BrushMode mode = PolylineWandParameters.getBrushMode();
@@ -165,56 +165,74 @@ public final class PolylineWandExtension implements QuPathExtension {
     }
 
     /**
-     * Paint a small polyline being pushed by short rays from the wand tip.
-     * The wand tip in FontAwesome's MAGIC glyph sits in the upper-right; we
-     * draw three rays heading from there into the lower-left, and a short
-     * polyline whose middle vertex is shoved away from the rays so the line
-     * visibly bulges where the rays hit it.
+     * Build a small "wand pushing a line" overlay out of {@link Line} shape
+     * nodes. The wand tip in FontAwesome's MAGIC glyph sits in the upper-right;
+     * three rays head from there into the lower-left, and a short polyline whose
+     * middle vertices are shoved away from the rays so the line visibly bulges
+     * where the rays hit it. Strokes bind to the default-objects color so the
+     * icon tracks the QuPath theme.
+     *
+     * <p>Uses retained-mode shapes (not a Canvas) because a Canvas does not
+     * render inside a toolbar button's graphic.</p>
      */
-    private static void drawPushedPolyline(Canvas canvas, int size) {
-        GraphicsContext g = canvas.getGraphicsContext2D();
-        g.clearRect(0, 0, size, size);
+    private static Pane buildPushedPolylineOverlay(double s) {
+        Pane pane = new Pane();
+        pane.setPrefSize(s, s);
+        pane.setMinSize(s, s);
+        pane.setMaxSize(s, s);
+        pane.setMouseTransparent(true);
 
-        Integer rgb = PathPrefs.colorDefaultObjectsProperty().get();
-        Color stroke = rgb == null
-                ? Color.WHITE
-                : Color.rgb(ColorTools.red(rgb), ColorTools.green(rgb), ColorTools.blue(rgb));
+        var strokeColor = Bindings.createObjectBinding(
+                () -> {
+                    Integer rgb = PathPrefs.colorDefaultObjectsProperty().get();
+                    return rgb == null
+                            ? Color.WHITE
+                            : Color.rgb(ColorTools.red(rgb), ColorTools.green(rgb), ColorTools.blue(rgb));
+                },
+                PathPrefs.colorDefaultObjectsProperty());
 
-        double s = size;
-        // Wand tip approx 75% across, 25% down (FontAwesome MAGIC glyph orientation).
+        // Wand tip approx 72% across, 30% down (FontAwesome MAGIC glyph orientation).
         double tipX = s * 0.72;
         double tipY = s * 0.30;
-
-        // Polyline runs lower-left to right edge with a pushed middle vertex.
         double rayLen = s * 0.28;
-        double rayDx = -0.78;  // unit vector from tip toward lower-left
+        double rayDx = -0.78; // unit vector from tip toward lower-left
         double rayDy = 0.62;
         double pushAmount = s * 0.10;
+        double rayWidth = Math.max(1.0, s * 0.05);
+        double lineWidth = Math.max(1.5, s * 0.09);
 
-        double p0x = s * 0.06,         p0y = s * 0.74;
-        double p1x = s * 0.32 + rayDx * pushAmount, p1y = s * 0.62 + rayDy * pushAmount;
-        double p2x = s * 0.58 + rayDx * pushAmount, p2y = s * 0.78 + rayDy * pushAmount;
-        double p3x = s * 0.92,         p3y = s * 0.92;
-
-        g.setStroke(stroke);
-        g.setLineCap(StrokeLineCap.ROUND);
-
-        // Rays -- thin strokes from the wand tip
-        g.setLineWidth(Math.max(1.0, s * 0.05));
-        g.setGlobalAlpha(0.75);
+        // Rays -- thin strokes fanning out from the wand tip.
+        double baseAng = Math.atan2(rayDy, rayDx);
         for (int i = -1; i <= 1; i++) {
-            double ang = Math.atan2(rayDy, rayDx) + i * 0.18;
+            double ang = baseAng + i * 0.18;
             double ex = tipX + Math.cos(ang) * rayLen;
             double ey = tipY + Math.sin(ang) * rayLen;
-            g.strokeLine(tipX, tipY, ex, ey);
+            Line ray = new Line(tipX, tipY, ex, ey);
+            ray.strokeProperty().bind(strokeColor);
+            ray.setStrokeWidth(rayWidth);
+            ray.setStrokeLineCap(StrokeLineCap.ROUND);
+            ray.setOpacity(0.75);
+            pane.getChildren().add(ray);
         }
 
-        // Polyline being pushed
-        g.setGlobalAlpha(1.0);
-        g.setLineWidth(Math.max(1.5, s * 0.09));
-        g.strokeLine(p0x, p0y, p1x, p1y);
-        g.strokeLine(p1x, p1y, p2x, p2y);
-        g.strokeLine(p2x, p2y, p3x, p3y);
+        // Polyline running lower-left to right edge with a pushed middle.
+        double p0x = s * 0.06, p0y = s * 0.74;
+        double p1x = s * 0.32 + rayDx * pushAmount, p1y = s * 0.62 + rayDy * pushAmount;
+        double p2x = s * 0.58 + rayDx * pushAmount, p2y = s * 0.78 + rayDy * pushAmount;
+        double p3x = s * 0.92, p3y = s * 0.92;
+        double[][] segments = {
+            {p0x, p0y, p1x, p1y},
+            {p1x, p1y, p2x, p2y},
+            {p2x, p2y, p3x, p3y},
+        };
+        for (double[] seg : segments) {
+            Line line = new Line(seg[0], seg[1], seg[2], seg[3]);
+            line.strokeProperty().bind(strokeColor);
+            line.setStrokeWidth(lineWidth);
+            line.setStrokeLineCap(StrokeLineCap.ROUND);
+            pane.getChildren().add(line);
+        }
+        return pane;
     }
 
     private void attachContextMenuToToolbarButton(QuPathGUI qupath) {
