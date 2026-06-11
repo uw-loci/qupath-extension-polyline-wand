@@ -6,6 +6,10 @@ Default keyboard chord: **Shift+P**.
 
 ![Animated demo of the polyline wand brush reshaping a polyline annotation](images/polyline-wand-brush-demo.gif)
 
+The tool sits in the QuPath toolbar alongside the built-in drawing tools. Its icon is a wand pushing a polyline; the small triangle in the corner means you can right-click the button for engine, mode, and brush options.
+
+![The Polyline Wand button (centre) in the QuPath toolbar, between the area brush/wand tools and the points/selection tools](images/polyline-wand-toolbar.png)
+
 ## Use cases
 
 - Tracing the leading edge of a tumor along a long polyline, then needing to push a section outward to include tissue you originally passed through.
