@@ -46,6 +46,13 @@ public final class PolylineWandExtension implements QuPathExtension {
 
     private boolean isInstalled = false;
 
+    // The mode-aware icon node. QuPath binds a tool's iconProperty to the tool
+    // action's graphic, but in practice the toolbar button is built as a text
+    // button with a null graphic before that binding takes effect, so the icon
+    // never appears. We therefore set this node on the button directly once it
+    // exists (see applyIconToToolbarButton).
+    private Node iconNode;
+
     @Override
     public String getName() {
         return "Polyline Wand and Brush";
@@ -67,12 +74,14 @@ public final class PolylineWandExtension implements QuPathExtension {
 
         installPreferences(qupath);
 
-        // JavaFX nodes (Glyph/Canvas/StackPane) must be constructed AND have
-        // their children mutated on the FX thread. Doing icon composition on a
-        // background thread left the toolbar button blank.
+        // The icon Node (Glyph + Line shapes in a StackPane) is constructed on
+        // the FX thread and later set on the toolbar button directly -- see
+        // applyIconToToolbarButton for why the tool's iconProperty alone is not
+        // enough to make the icon appear.
         PolylineWandEventHandler handler = new PolylineWandEventHandler();
         Platform.runLater(() -> {
             Node icon = createModeAwareIcon(QuPathGUI.TOOLBAR_ICON_SIZE);
+            iconNode = icon;
             PathTool tool = new PolylineWandPathTool(handler, "Polyline Wand", icon);
 
             KeyCodeCombination chord = new KeyCodeCombination(KeyCode.P, KeyCombination.SHIFT_DOWN);
@@ -235,6 +244,27 @@ public final class PolylineWandExtension implements QuPathExtension {
         return pane;
     }
 
+    /**
+     * Put the mode-aware icon directly on the toolbar button. QuPath is meant to
+     * derive the button graphic from the tool's {@code iconProperty}, but the
+     * button is created as a text button with a {@code null} graphic before that
+     * binding lands, leaving the body of the icon blank (only the separately
+     * added corner triangle shows). Setting the graphic on the button here --
+     * after unbinding any null-valued binding QuPath installed -- guarantees the
+     * icon appears. The node keeps its own brush/scissors mode listener, so
+     * mode swaps continue to work after this hand-off.
+     */
+    private void applyIconToToolbarButton(ButtonBase button) {
+        if (iconNode == null) {
+            return;
+        }
+        if (button.graphicProperty().isBound()) {
+            button.graphicProperty().unbind();
+        }
+        button.setGraphic(iconNode);
+        button.setContentDisplay(ContentDisplay.GRAPHIC_ONLY);
+    }
+
     private void attachContextMenuToToolbarButton(QuPathGUI qupath) {
         Platform.runLater(() -> Platform.runLater(() -> tryAttachContextMenu(qupath, 0)));
     }
@@ -247,6 +277,7 @@ public final class PolylineWandExtension implements QuPathExtension {
         }
         ButtonBase button = findToolbarButton(toolBar);
         if (button != null) {
+            applyIconToToolbarButton(button);
             ContextMenu menu = PolylineWandContextMenu.build();
             button.setContextMenu(menu);
             addContextMenuDecoration(button, menu);
