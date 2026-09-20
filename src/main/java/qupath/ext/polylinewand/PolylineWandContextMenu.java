@@ -59,7 +59,7 @@ public final class PolylineWandContextMenu {
                             + "engine-specific tunings) to their defaults?",
                     ButtonType.OK, ButtonType.CANCEL);
             confirm.setHeaderText("Reset Polyline Wand preferences");
-            confirm.setTitle("Polyline Wand");
+            confirm.setTitle("Polyline Wand - Reset Preferences");
             confirm.getDialogPane().setMinHeight(Region.USE_PREF_SIZE);
             confirm.showAndWait().ifPresent(result -> {
                 if (result == ButtonType.OK) {
@@ -192,7 +192,7 @@ public final class PolylineWandContextMenu {
     private static void promptDouble(String title, String header, double current,
                                      java.util.function.DoubleConsumer setter) {
         TextInputDialog dlg = new TextInputDialog(String.valueOf(current));
-        dlg.setTitle("Polyline Wand");
+        dlg.setTitle("Polyline Wand - Enter Value");
         dlg.setHeaderText(title);
         dlg.setContentText(header);
         dlg.showAndWait().ifPresent(s -> {
@@ -207,7 +207,7 @@ public final class PolylineWandContextMenu {
     private static void promptInteger(String title, String header, int current,
                                       java.util.function.IntConsumer setter) {
         TextInputDialog dlg = new TextInputDialog(String.valueOf(current));
-        dlg.setTitle("Polyline Wand");
+        dlg.setTitle("Polyline Wand - Enter Value");
         dlg.setHeaderText(title);
         dlg.setContentText(header);
         dlg.showAndWait().ifPresent(s -> {
