@@ -24,6 +24,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
  */
 public final class PolylineWandOverlay extends AbstractOverlay implements PathOverlay {
 
+    private static final double CURSOR_STROKE_SCREEN_PX = 1.5;
+    private static final double CURSOR_DASH_SCREEN_PX = 5.0;
+
     private final QuPathViewer viewer;
     private volatile double cursorImageX = Double.NaN;
     private volatile double cursorImageY = Double.NaN;
@@ -74,7 +77,8 @@ public final class PolylineWandOverlay extends AbstractOverlay implements PathOv
         Color oldColor = g2d.getColor();
         try {
             g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-            float strokeWidth = (float) Math.max(1.0, downsampleFactor);
+            // Graphics are in image space; scale by downsample for a constant on-screen width.
+            float strokeWidth = (float) (CURSOR_STROKE_SCREEN_PX * downsampleFactor);
             g2d.setColor(outlineColor);
             if (hardEdge) {
                 g2d.setStroke(new BasicStroke(strokeWidth));
@@ -84,7 +88,7 @@ public final class PolylineWandOverlay extends AbstractOverlay implements PathOv
                 g2d.setStroke(new BasicStroke(strokeWidth));
                 g2d.draw(ellipseAt(cursorImageX, cursorImageY, rInner));
                 // Dashed outer: maximum reach (effect tapers to ~0 here).
-                float dash = (float) Math.max(2.0, downsampleFactor * 4.0);
+                float dash = (float) (CURSOR_DASH_SCREEN_PX * downsampleFactor);
                 g2d.setStroke(new BasicStroke(strokeWidth * 0.75f, BasicStroke.CAP_BUTT,
                         BasicStroke.JOIN_MITER, 10f, new float[]{dash, dash}, 0f));
                 g2d.setColor(new Color(outlineColor.getRed(), outlineColor.getGreen(),
