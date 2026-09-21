@@ -42,12 +42,12 @@ public final class PolylineWandOverlay extends AbstractOverlay implements PathOv
         this.cursorImageRadius = imageRadius;
         this.currentMode = mode;
         this.visible.set(true);
-        viewer.repaintEntireImage();
+        viewer.repaint();
     }
 
     public void hideCursor() {
         this.visible.set(false);
-        viewer.repaintEntireImage();
+        viewer.repaint();
     }
 
     @Override

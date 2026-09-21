@@ -93,6 +93,6 @@ public final class CommitThrottler {
         if (hierarchy != null) {
             hierarchy.fireObjectsChangedEvent(this, List.of(annotation), true);
         }
-        viewer.repaintEntireImage();
+        viewer.repaint();
     }
 }
