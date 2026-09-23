@@ -317,36 +317,13 @@ public final class PolylineWandEventHandler implements EventHandler<MouseEvent> 
         if (pts.size() < 2) {
             return;
         }
-        // Find closest segment + closest point on it
-        int bestSeg = -1;
-        double bestDistSq = Double.MAX_VALUE;
-        Point2 bestPt = null;
-        double bestT = 0.0;
-        for (int i = 0; i < pts.size() - 1; i++) {
-            Point2 a = pts.get(i);
-            Point2 b = pts.get(i + 1);
-            double abx = b.getX() - a.getX();
-            double aby = b.getY() - a.getY();
-            double abLen2 = abx * abx + aby * aby;
-            double t = abLen2 < 1e-12 ? 0.0
-                    : ((clickImagePt.getX() - a.getX()) * abx
-                     + (clickImagePt.getY() - a.getY()) * aby) / abLen2;
-            t = Math.max(0.0, Math.min(1.0, t));
-            double px = a.getX() + t * abx;
-            double py = a.getY() + t * aby;
-            double dx = px - clickImagePt.getX();
-            double dy = py - clickImagePt.getY();
-            double d2 = dx * dx + dy * dy;
-            if (d2 < bestDistSq) {
-                bestDistSq = d2;
-                bestPt = new Point2(px, py);
-                bestSeg = i;
-                bestT = t;
-            }
-        }
-        if (bestSeg < 0 || bestPt == null) {
+        PolylineProjection proj = PolylineProjection.nearest(pts, clickImagePt);
+        if (proj == null) {
             return;
         }
+        int bestSeg = proj.segment();
+        double bestT = proj.t();
+        Point2 bestPt = proj.point();
         // Build the two halves. If t is at an endpoint of the segment, the
         // existing vertex serves as the split point (avoid duplicate insert).
         List<Point2> first = new ArrayList<>();
@@ -399,8 +376,36 @@ public final class PolylineWandEventHandler implements EventHandler<MouseEvent> 
             return;
         }
         Point2D p = viewer.componentPointToImagePoint(e.getX(), e.getY(), null, false);
+        BrushMode mode = PolylineWandParameters.getBrushMode();
+        if (mode == BrushMode.CUT_AT_POINT) {
+            // The cut lands on the nearest point of the selected polyline, not
+            // within a radius, so preview that point instead of a brush circle.
+            Point2 cut = previewCutPoint(new Point2(p.getX(), p.getY()));
+            overlay.updateCutCursor(p.getX(), p.getY(),
+                    cut == null ? Double.NaN : cut.getX(),
+                    cut == null ? Double.NaN : cut.getY());
+            return;
+        }
         double r = effectiveImageRadius(PolylineWandParameters.getBrushRadius());
-        overlay.updateCursor(p.getX(), p.getY(), r, PolylineWandParameters.getBrushMode());
+        overlay.updateCursor(p.getX(), p.getY(), r, mode);
+    }
+
+    /**
+     * Where a scissors click at {@code imgPt} would split the selected polyline.
+     *
+     * @return the cut point, or {@code null} if nothing cuttable is selected
+     */
+    private Point2 previewCutPoint(Point2 imgPt) {
+        PathObject selected = viewer.getSelectedObject();
+        if (selected == null || !selected.isAnnotation() || selected.isLocked()) {
+            return null;
+        }
+        ROI roi = selected.getROI();
+        if (!(roi instanceof LineROI) && !(roi instanceof PolylineROI)) {
+            return null;
+        }
+        PolylineProjection proj = PolylineProjection.nearest(roi.getAllPoints(), imgPt);
+        return proj == null ? null : proj.point();
     }
 
     private double effectiveImageRadius(double prefRadius) {
