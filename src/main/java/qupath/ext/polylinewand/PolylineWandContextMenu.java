@@ -34,10 +34,10 @@ public final class PolylineWandContextMenu {
     private static void populate(ContextMenu menu) {
         menu.getItems().clear();
 
+        // Mode selector first: it changes far more often than the engine.
+        menu.getItems().add(buildModeSubmenu());
         // Engine selector
         menu.getItems().add(buildEngineSubmenu());
-        // Mode selector
-        menu.getItems().add(buildModeSubmenu());
         // Engine-specific settings (rebuilt every time)
         menu.getItems().add(buildEngineSettingsSubmenu());
         menu.getItems().add(new SeparatorMenuItem());

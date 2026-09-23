@@ -40,8 +40,8 @@ The toolbar exposes a single **Polyline Wand** tool. Right-click the toolbar but
 Right-click the toolbar button to bring up:
 
 ```
-Engine >                    (radio: Direct vertex push / Displacement field)
 Mode >                      (radio: Auto / Push / Smooth / Erase from end / Scissors)
+Engine >                    (radio: Direct vertex push / Displacement field)
 Engine settings >           (engine-specific submenu, swaps based on the active engine)
 Set brush radius...
 Reset Polyline Wand preferences

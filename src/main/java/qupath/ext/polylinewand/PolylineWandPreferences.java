@@ -31,6 +31,13 @@ public final class PolylineWandPreferences {
 
         // ---- Shared ----
 
+        items.add(new PropertyItemBuilder<>(PolylineWandParameters.brushModeProperty(), BrushMode.class)
+                .name("Mode")
+                .category(CATEGORY)
+                .description("Default brush behavior. AUTO pushes, but switches to ERASE_FROM_END "
+                        + "automatically when the stroke begins near a polyline endpoint.")
+                .build());
+
         items.add(new PropertyItemBuilder<>(PolylineWandParameters.engineKindProperty(), EngineKind.class)
                 .name("Engine")
                 .category(CATEGORY)
@@ -39,13 +46,6 @@ public final class PolylineWandPreferences {
                         + "Most reactive feel; the brush can start anywhere and pull the line toward it.\n\n"
                         + "Displacement field: locks an active arc-length window at press; per-vertex "
                         + "cosine kernel + velocity damping for the most tactile feel.")
-                .build());
-
-        items.add(new PropertyItemBuilder<>(PolylineWandParameters.brushModeProperty(), BrushMode.class)
-                .name("Mode")
-                .category(CATEGORY)
-                .description("Default brush behavior. AUTO pushes, but switches to ERASE_FROM_END "
-                        + "automatically when the stroke begins near a polyline endpoint.")
                 .build());
 
         items.add(new PropertyItemBuilder<>(PolylineWandParameters.brushRadiusProperty(), Double.class)
