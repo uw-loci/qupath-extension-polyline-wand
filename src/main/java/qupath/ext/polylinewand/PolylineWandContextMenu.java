@@ -61,6 +61,7 @@ public final class PolylineWandContextMenu {
             confirm.setHeaderText("Reset Polyline Wand preferences");
             confirm.setTitle("Polyline Wand - Reset Preferences");
             confirm.getDialogPane().setMinHeight(Region.USE_PREF_SIZE);
+            DialogOwner.own(confirm);
             confirm.showAndWait().ifPresent(result -> {
                 if (result == ButtonType.OK) {
                     PolylineWandParameters.resetDefaults();
@@ -195,6 +196,7 @@ public final class PolylineWandContextMenu {
         dlg.setTitle("Polyline Wand - Enter Value");
         dlg.setHeaderText(title);
         dlg.setContentText(header);
+        DialogOwner.own(dlg);
         dlg.showAndWait().ifPresent(s -> {
             try {
                 setter.accept(Double.parseDouble(s.trim()));
@@ -210,6 +212,7 @@ public final class PolylineWandContextMenu {
         dlg.setTitle("Polyline Wand - Enter Value");
         dlg.setHeaderText(title);
         dlg.setContentText(header);
+        DialogOwner.own(dlg);
         dlg.showAndWait().ifPresent(s -> {
             try {
                 setter.accept(Integer.parseInt(s.trim()));
