@@ -8,7 +8,7 @@ Default keyboard chord: **Shift+P**.
 
 The tool sits in the QuPath toolbar alongside the built-in drawing tools. Its icon is a wand with a polyline running from its tip; the small triangle in the corner means you can right-click the button for engine, mode, and brush options.
 
-![The Polyline Wand button (centre) in the QuPath toolbar, between the area brush/wand tools and the points/selection tools](images/polyline-wand-toolbar.png)
+![The Polyline Wand button in the QuPath toolbar, after the brush, the built-in wand and the Wizard Wand, and before the points and selection tools](images/polyline-wand-toolbar.png)
 
 ## Use cases
 
